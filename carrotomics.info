@@ -1,0 +1,6 @@
+name = CarrotOmics Extensions Module
+description = Extended Tripal themes and templates created for CarrotOmics
+core = 7.x
+package = CarrotOmics
+version = 7.x-1.0
+dependencies[] = tripal_core

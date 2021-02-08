@@ -1,0 +1,11 @@
+<?php
+/**
+ * @file
+ *       Extensions for the CarrotOmics.org site
+ *
+ * @ingroup carrotomics
+ */
+
+//require('theme/carrotomics.theme.inc');
+//require('includes/carrotomics.utils.inc');
+require_once('includes/carrotomics.fields.inc');
