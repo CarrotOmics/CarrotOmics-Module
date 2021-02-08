@@ -1,7 +1,9 @@
 CarrotOmics-Module
 ==================
 
-This is a custom Tripal module used on the CarrotOmics.org site
+This is a custom Tripal module used on the CarrotOmics.org site.
+
+It is a work-in-progress, and not ready for general use.
 
 So far, this module consists of only Tripal Fields. These fields are:
 
