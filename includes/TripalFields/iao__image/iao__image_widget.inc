@@ -13,7 +13,6 @@ class iao__image_widget extends ChadoFieldWidget {
    * @see TripalFieldWidget::form()
    */
   public function form(&$widget, &$form, &$form_state, $langcode, $items, $delta, $element) {
-//file_put_contents( "/tmp/log.carrotomics", "CP7a form\n", FILE_APPEND ); //@@@
 
     $field_name = $this->field['field_name'];
     $field_table = $this->instance['settings']['chado_table'];
@@ -42,7 +41,6 @@ class iao__image_widget extends ChadoFieldWidget {
    * @see TripalFieldWidget::submit()
    */
   public function submit($form, &$form_state, $entity_type, $entity, $langcode, $delta) {
-//file_put_contents( "/tmp/log.carrotomics", "CP8a submit\n", FILE_APPEND ); //@@@
 
   }
 }

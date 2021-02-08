@@ -38,20 +38,20 @@ trees that are part of that analysis.
 local__biomaterial_project
 --------------------------
 
-This Triapl field can be used on a biomaterial entity page to show projects and analyses
+This Tripal field can be used on a biomaterial entity page to show projects and analyses
 using this biomaterial.
 ![local__biomaterial_project example image](/docs/local__biomaterial_project_example.jpg?raw=true "Example")
 
 local__analysis_project
 -----------------------
 
-This Triapl field can be used on an analysis entity page to show what project this
+This Tripal field can be used on an analysis entity page to show what project this
 analysis belongs to.
 ![local__analysis_project example image](/docs/local__analysis_project_example.jpg?raw=true "Example")
 
 local__project_analysis
 -----------------------
 
-This Triapl field can be used on a project entity page to show all analyses that
+This Tripal field can be used on a project entity page to show all analyses that
 are part of the project.
 ![local__project_analysis example image](/docs/local__project_analysis_example.jpg?raw=true "Example")

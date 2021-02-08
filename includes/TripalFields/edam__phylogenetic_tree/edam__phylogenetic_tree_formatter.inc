@@ -103,7 +103,6 @@ class edam__phylogenetic_tree_formatter extends ChadoFieldFormatter {
 
 
   public function settingsSummary($view_mode) {
-//file_put_contents( "/tmp/log.carrotomics", "CP7a settingsSummary()\n", FILE_APPEND ); //@@@
   $display = $this->instance['display'][$view_mode];
   $settings = $display['settings'];
   $summary = t('Title: @title<br>Empty: @empty',
@@ -112,8 +111,6 @@ class edam__phylogenetic_tree_formatter extends ChadoFieldFormatter {
         '@empty' => array_key_exists('empty', $settings)?$settings['empty']:'There are no phylogenetic trees for this analysis'
       ]);
 
-//ob_start(); var_dump($summary); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP7b settingsSummary() summary = ".$astring."\n", FILE_APPEND ); //@@@
   return $summary;
   }
 }

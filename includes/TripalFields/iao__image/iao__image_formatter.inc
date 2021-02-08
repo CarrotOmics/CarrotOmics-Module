@@ -13,22 +13,11 @@ class iao__image_formatter extends ChadoFieldFormatter {
    * @see TripalFieldFormatter::view()
    */
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
-//file_put_contents( "/tmp/log.carrotomics", "CP5a view()\n", FILE_APPEND ); //@@@
-//todo: settings appears to be empty here
     $settings = $display['settings'];
-//ob_start(); var_dump($display); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP5b load() display = ".$astring."\n", FILE_APPEND ); //@@@
-//ob_start(); var_dump($settings); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP5c load() settings = ".$astring."\n", FILE_APPEND ); //@@@
     $rows = [];
     $headers = [($settings['title'] ?? 'Image'), 'Annotations'];
 
     foreach ($items as $delta => $item) {
-//ob_start(); var_dump($delta); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP5d load() delta = ".$astring."\n", FILE_APPEND ); //@@@
-//ob_start(); var_dump($item); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP5e load() item = ".$astring."\n", FILE_APPEND ); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP5f load() add image\n", FILE_APPEND ); //@@@
       if (empty($item['value'])) {
         continue;
       }
@@ -38,8 +27,6 @@ class iao__image_formatter extends ChadoFieldFormatter {
       $uri = '/sites/default/files/bulk_data/carrotomics/germplasm/image/' . $item['value']['uri'];
       // thumbnail of image
       $tn = '/sites/default/files/bulk_data/carrotomics/germplasm/icon/' . $item['value']['uri'];
-
-//https://test.carrotomics.org/sites/default/files/k11611-1i.tn_.jpg
 
       // All annotations, if present, will be converted to a single string
       $annotationstring = '';
@@ -84,7 +71,6 @@ class iao__image_formatter extends ChadoFieldFormatter {
     ]);
     $pager = $this->ajaxifyPager($pager, $entity);
     $page_items = array_chunk($rows, $items_per_page);
-//file_put_contents( "/tmp/log.carrotomics", "CP5f load() items_per_page=$items_per_page total_records=$total_records total_pages=$total_pages pelement=$pelement current_page=$current_page \n", FILE_APPEND ); //@@@
 
     $caption = '';
     if ($total_records == 1) {
@@ -115,10 +101,7 @@ class iao__image_formatter extends ChadoFieldFormatter {
 
 
   public function settingsForm($view_mode, $form, &$form_state) {
-//file_put_contents( "/tmp/log.carrotomics", "CP6a settingsForm()\n", FILE_APPEND ); //@@@
     $display = $this->instance['display'][$view_mode];
-//ob_start(); var_dump($display); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP6b settingsForm() display = ".$astring."\n", FILE_APPEND ); //@@@
     $settings = $display['settings'];
     $element = [];
     $element['title'] = [
@@ -132,15 +115,12 @@ class iao__image_formatter extends ChadoFieldFormatter {
       '#default_value' => array_key_exists('empty', $settings) ? $settings['empty'] : 'There are no images for this accession',
     ];
 
-//ob_start(); var_dump($element); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP6c settingsForm() element = ".$astring."\n", FILE_APPEND ); //@@@
     return $element;
   }
 
 
 
   public function settingsSummary($view_mode) {
-//file_put_contents( "/tmp/log.carrotomics", "CP7a settingsSummary()\n", FILE_APPEND ); //@@@
   $display = $this->instance['display'][$view_mode];
   $settings = $display['settings'];
   $summary = t('Title: @title<br>Empty: @empty',
@@ -149,8 +129,6 @@ class iao__image_formatter extends ChadoFieldFormatter {
         '@empty' => array_key_exists('empty', $settings)?$settings['empty']:'There are no images for this accession'
       ]);
 
-//ob_start(); var_dump($summary); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP7b settingsSummary() summary = ".$astring."\n", FILE_APPEND ); //@@@
   return $summary;
   }
 }

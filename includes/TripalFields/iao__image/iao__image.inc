@@ -63,7 +63,6 @@ class iao__image extends ChadoField {
    */
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
-//file_put_contents( "/tmp/log.carrotomics", "CP3a elementInfo\n", FILE_APPEND ); //@@@
 
     $image_term = 'IAO:image';
     // eimage_prop supplies all other linked information
@@ -96,7 +95,6 @@ class iao__image extends ChadoField {
    */
   public function load($entity) {
 
-//file_put_contents( "/tmp/log.carrotomics", "CP4b load()\n", FILE_APPEND ); //@@@
     $settings = $this->field['settings'];
 
     $record = $entity->chado_record;
@@ -117,16 +115,11 @@ class iao__image extends ChadoField {
     $chado_record = $entity->chado_record;
     $entity->{$field_name}['und'] = [];
 
-//ob_start(); var_dump($chado_record); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP4b load() chado_record = ".$astring."\n", FILE_APPEND ); //@@@
     // Using the nd_experiment_stock table, find all nd_geolocation records
     // linked to this record
-//file_put_contents( "/tmp/log.carrotomics", "CP4c load() stock_id=".$chado_record->stock_id."\n", FILE_APPEND ); //@@@
     $records = chado_generate_var('stock_image',
                                   ['stock_id' => $chado_record->stock_id],
                                   ['return_array' => TRUE]);
-//ob_start(); var_dump($records); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP4d load() records=".$astring."\n", FILE_APPEND ); //@@@
     // iterate to retrieve all eimage_id values for this stock_id
     $one_eimage_record = [];
     foreach ($records as $record) {
@@ -134,28 +127,22 @@ class iao__image extends ChadoField {
         $eimage_id = $record->eimage_id->eimage_id;
         $image_uri = $record->eimage_id->image_uri;
         $one_eimage_record = [ 'id' => $eimage_id, 'uri' => $image_uri, 'annotations' => [] ];
-//file_put_contents( "/tmp/log.carrotomics", "CP4e load() eimage_id=$eimage_id\n", FILE_APPEND ); //@@@
 
         // each image may have zero or more annotations in the eimageprop table
         $annotations = chado_generate_var('eimageprop',
                                           ['eimage_id' => $eimage_id],
                                           ['return_array' => TRUE]);
         foreach ($annotations as $annotation) {
-//ob_start(); var_dump($annotation); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP4e load() annotation = ".$astring."\n", FILE_APPEND ); //@@@
           $label = $annotation->type_id->name;  // the CV term for this annotation
 //          $cv = $annotation->type_id->cv_id->name;
 //          $label = $cv . ':' . $label;  // the CV and CV term for this annotation
           $value = $annotation->value;  // the value of the annotation
           $one_eimage_record['annotations'][$label] = $value;
-//file_put_contents( "/tmp/log.carrotomics", "CP4f load() lbl=$label val=$value\n", FILE_APPEND ); //@@@
           
         }
 
         // add everything about this one image to the entity array as another 'value' element
         $entity->{$field_name}['und'][] = ['value' => $one_eimage_record];
-//ob_start(); var_dump($entity->{$field_name}['und']); $astring = ob_get_clean(); //@@@
-//file_put_contents( "/tmp/log.carrotomics", "CP4g load() und = ".$astring."\n", FILE_APPEND ); //@@@
       }
     }
   }

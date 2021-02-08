@@ -62,7 +62,6 @@ class edam__accession extends ChadoField {
    * @see TripalField::elementInfo()
    */
   public function elementInfo() {
-file_put_contents( "/tmp/what", "CP 2A elementInfo()\n", FILE_APPEND ); //@@@
     $field_term = $this->getFieldTermID();
 
     $image_term = 'edam:Accession';
@@ -95,7 +94,6 @@ file_put_contents( "/tmp/what", "CP 2A elementInfo()\n", FILE_APPEND ); //@@@
    * @see TripalField::load()
    */
   public function load($entity) {
-file_put_contents( "/tmp/what", "CP 3A load()\n", FILE_APPEND ); //@@@
     $settings = $this->field['settings'];
 
     $record = $entity->chado_record;
@@ -136,7 +134,6 @@ file_put_contents( "/tmp/what", "CP 3A load()\n", FILE_APPEND ); //@@@
     if ( $records ) {
       while ( $record = $records->fetchObject() ) {
         $stock_name = $record->uniquename;
-file_put_contents( "/tmp/what", "CP 3B load() stock_name=$stock_name\n", FILE_APPEND ); //@@@
 
         // get entity id values.
         foreach ($acbundles as $acbundle) {
@@ -148,7 +145,6 @@ file_put_contents( "/tmp/what", "CP 3B load() stock_name=$stock_name\n", FILE_AP
             while ( $brecord = $brecords->fetchObject() ) {
               // not all stocks have entities, only return those that do
               if ($brecord->entity_id) {
-file_put_contents( "/tmp/what", "CP 3C load() acbundle=$acbundle entity=$brecord->entity_id\n", FILE_APPEND ); //@@@
                 $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $stock_name;
                 $entity->{$field_name}['und'][$delta]['value']['entity'] = 'bio_data:' . $brecord->entity_id;
                 $delta++;
