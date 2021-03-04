@@ -64,7 +64,7 @@ class edam__phylogenetic_tree extends ChadoField {
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
 
-    $element_term = 'edam:Phylogenetic tree';
+    $element_term = 'data:0872';
     // phylotree_prop supplies all other linked information
 
     return [
@@ -75,9 +75,6 @@ class edam__phylogenetic_tree extends ChadoField {
         'type' => 'xs:complexType',
         'readonly' => FALSE,
         'elements' => [
-          'data:phylogenetic tree' => [
-            'name' => 'Phylogenetic tree',
-          ],
           $element_term => [
             'name' => 'Phylogenetic tree',
             'operations' => [],

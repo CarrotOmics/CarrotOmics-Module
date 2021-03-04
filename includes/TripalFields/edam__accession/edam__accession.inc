@@ -64,7 +64,7 @@ class edam__accession extends ChadoField {
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
 
-    $image_term = 'edam:Accession';
+    $element_term = 'data:2091';
     // stock_prop supplies all other linked information
 
     return [
@@ -75,10 +75,7 @@ class edam__accession extends ChadoField {
         'type' => 'xs:complexType',
         'readonly' => FALSE,
         'elements' => [
-//          'edam:accession' => [
-//            'name' => 'Germplasm Accession',
-//          ],
-          $image_term => [
+          $element_term => [
             'name' => 'Accession',
             'operations' => [],
           ],

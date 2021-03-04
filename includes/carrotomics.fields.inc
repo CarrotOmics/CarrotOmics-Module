@@ -12,7 +12,7 @@
  * @param $bundle - Describes Tripal Entity type (Organism, Gene, etc,) hook is called for
  * 
  * @return
- *   An array of field definitions. Call tripal_refresh_bundle_fields() to trigger create 
+ *   An array of field definitions. Call tripal_refresh_bundle_fields() to trigger creation
  *   of fields for the specific bundle.
  */
 function carrotomics_bundle_fields_info($entity_type, $bundle) {
@@ -23,10 +23,11 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
 
   // if germplasm or stock entity, then we'll attach our
   // fields to display the information
-  if ( ($term_accession == 'CO_010__0000044')
-    or ($term_accession == 'CO_010__0000029')
-    or ($term_accession == 'CO_010__0000255')
-    or ($term_accession == 'CO_010__0000162') ) {
+  // CO_010 = Crop Germplasm Ontology
+  if ( ($term_accession == 'CO_010__0000044')     // accession
+    or ($term_accession == 'CO_010__0000029')     // cultivar
+    or ($term_accession == 'CO_010__0000255')     // generated germplasm
+    or ($term_accession == 'CO_010__0000162') ) { // 414 inbred line
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
     $info[$field_name] = [

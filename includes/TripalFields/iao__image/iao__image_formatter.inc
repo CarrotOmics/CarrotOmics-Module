@@ -13,6 +13,7 @@ class iao__image_formatter extends ChadoFieldFormatter {
    * @see TripalFieldFormatter::view()
    */
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
+//todo: settings appears to be empty here
     $settings = $display['settings'];
     $rows = [];
     $headers = [($settings['title'] ?? 'Image'), 'Annotations'];
@@ -27,6 +28,8 @@ class iao__image_formatter extends ChadoFieldFormatter {
       $uri = '/sites/default/files/bulk_data/carrotomics/germplasm/image/' . $item['value']['uri'];
       // thumbnail of image
       $tn = '/sites/default/files/bulk_data/carrotomics/germplasm/icon/' . $item['value']['uri'];
+
+//https://test.carrotomics.org/sites/default/files/k11611-1i.tn_.jpg
 
       // All annotations, if present, will be converted to a single string
       $annotationstring = '';

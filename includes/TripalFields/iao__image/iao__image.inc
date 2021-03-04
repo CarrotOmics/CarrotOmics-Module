@@ -26,11 +26,11 @@ class iao__image extends ChadoField {
   // required for all TripalFields.
   public static $default_instance_settings = [
     // The short name for the vocabulary (e.g. schema, SO, GO, PATO, etc.).
-    'term_vocabulary' => 'iao',
+    'term_vocabulary' => 'IAO',  // DB name
     // The name of the term.
-    'term_name' => 'image',
+    'term_name' => 'image',  // cvterm name
     // The unique ID (i.e. accession) of the term.
-    'term_accession' => '0000101',
+    'term_accession' => '0000101',  // DB accession from dbxref from the cvterm
     // Set to FALSE if the site admin is allowed to change the term
     // type. This will create form elements when editing the field instance
     // to allow the site admin to change the term settings above.
@@ -64,7 +64,7 @@ class iao__image extends ChadoField {
   public function elementInfo() {
     $field_term = $this->getFieldTermID();
 
-    $image_term = 'IAO:image';
+    $uri_term = chado_get_semweb_term('eimage', 'image_uri');
     // eimage_prop supplies all other linked information
 
     return [
@@ -75,10 +75,7 @@ class iao__image extends ChadoField {
         'type' => 'xs:complexType',
         'readonly' => FALSE,
         'elements' => [
-          'iao:image' => [
-            'name' => 'image',
-          ],
-          $image_term => [
+          $uri_term => [
             'name' => 'Image',
             'operations' => [],
           ],
@@ -134,8 +131,6 @@ class iao__image extends ChadoField {
                                           ['return_array' => TRUE]);
         foreach ($annotations as $annotation) {
           $label = $annotation->type_id->name;  // the CV term for this annotation
-//          $cv = $annotation->type_id->cv_id->name;
-//          $label = $cv . ':' . $label;  // the CV and CV term for this annotation
           $value = $annotation->value;  // the value of the annotation
           $one_eimage_record['annotations'][$label] = $value;
           

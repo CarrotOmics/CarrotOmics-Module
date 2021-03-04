@@ -1,0 +1,107 @@
+<?php
+/**
+ * @file
+ *
+ * Installation of the file module
+ */
+
+
+/**
+ * Implements hook_requirements().
+ */
+function carrotomics_requirements($phase) {
+  $requirements = [];
+  if ($phase == 'install') {
+    if (!module_exists('tripal_core') and !module_exists('tripal')) {
+      $requirements['tripal_galaxy'] = [
+        'title' => "tripal_galaxy",
+        'value' => "ERROR: You must have Tripal v2 or v3 installed to use this module.",
+        'severity' => REQUIREMENT_ERROR,
+      ];
+    }
+  }
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ *
+ * Performs actions when the module is first installed.
+ *
+ * @ingroup carrotomics
+ */
+function carrotomics_install() {
+
+  // Add the required cv terms
+  carrotomics_add_terms();
+
+}
+
+/**
+ *
+ */
+function carrotomics_add_terms() {
+  //
+  // CV entries
+  //
+  // The SIO cv does not need to be added because it is
+  // automatically added by the base Tripal setup.
+  // Add the IAO cv
+  chado_insert_cv('IAO', 'Information Artifact Ontology  is a new ontology of information entities, originally driven by work by the OBI digital entity and realizable information entity branch.');
+  // Add the EDAM cv
+  chado_insert_cv('EDAM', 'EDAM is an ontology of well established, familiar concepts that are prevalent within bioinformatics, including types of data and data identifiers, data formats, operations and topics. EDAM is a simple ontology - essentially a set of terms with synonyms and definitions - organised into an intuitive hierarchy for convenient use by curators, software developers and end-users. EDAM is suitable for large-scale semantic annotations and categorization of diverse bioinformatics resources. EDAM is also suitable for diverse application including for example within workbenches and workflow-management systems, software distributions, and resource registries.');
+
+  //
+  // Field types
+  //
+  $term = chado_insert_cvterm([
+    'id' => 'SIO:000013',
+    'name' => 'geographic position',
+    'cv_name' => 'SIO',
+    'definition' => 'A geographic position is the coordinate of an entity against some geographic coordinate system.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'IAO:0000101',
+    'name' => 'image',
+    'cv_name' => 'IAO',
+    'definition' => 'An image is an affine projection to a two dimensional surface, of measurements of some quality of an entity or entities repeated at regular intervals across a spatial range, where the measurements are represented as color and luminosity on the projected on surface.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'data:2091',
+    'name' => 'Accession',
+    'cv_name' => 'EDAM',
+    'definition' => 'A persistent (stable) and unique identifier, typically identifying an object (entry) from a database.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'data:3140',
+    'name' => 'Phylogenetic tree',
+    'cv_name' => 'EDAM',
+    'definition' => 'The raw data (not just an image) from which a phylogenetic tree is directly generated or plotted, such as topology, lengths (in time or in expected amounts of variance) and a confidence interval for each length.',
+  ]);
+
+  // local terms
+  $term = chado_insert_cvterm([
+    'id' => 'local:analysis_project',
+    'name' => 'analysis_project',
+    'cv_name' => 'local',
+    'definition' => 'Used for a Tripal Field to link all projects containing a given analysis',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:biomaterial_project',
+    'name' => 'biomaterial_project',
+    'cv_name' => 'local',
+    'definition' => 'Provides a link from biomaterials to projects or to analyses that use them',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:project_analysis',
+    'name' => 'project_analysis',
+    'cv_name' => 'local',
+    'definition' => 'Used for a Tripal Field to link all analyses within a given project',
+  ]);
+
+}

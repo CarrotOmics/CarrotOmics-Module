@@ -65,9 +65,9 @@ class sio__geographic_position extends ChadoField {
     $field_term = $this->getFieldTermID();
 
     $description_term = chado_get_semweb_term('nd_geolocation', 'description'); // i.e. schema:description
-    $latitude_term = chado_get_semweb_term('nd_geolocation', 'latitude') ?? 'SIO:latitude';
-    $longitude_term = chado_get_semweb_term('nd_geolocation', 'longitude') ?? 'SIO:longitude';
-    $altitude_term = chado_get_semweb_term('nd_geolocation', 'altitude') ?? 'SIO:altitude';
+    $latitude_term = chado_get_semweb_term('nd_geolocation', 'latitude') ?? 'SIO:000319';
+    $longitude_term = chado_get_semweb_term('nd_geolocation', 'longitude') ?? 'SIO:000318';
+    $altitude_term = chado_get_semweb_term('nd_geolocation', 'altitude') ?? 'SIO:000438';
     $latitude_dev_term = chado_get_semweb_term('nd_geolocation', 'latitude_dev') ?? 'local:latitude_dev';
     $longitude_dev_term = chado_get_semweb_term('nd_geolocation', 'longitude_dev') ?? 'local:longitude_dev';
     $altitude_dev_term = chado_get_semweb_term('nd_geolocation', 'altitude_dev') ?? 'local:altitude_dev';
