@@ -110,7 +110,9 @@ class edam__phylogenetic_tree extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    // $entity->{$field_name}['und'] = [];
+    // as passed in [0]['value'] is an empty string - this ugly hack removes it. to-do: find the reason
+    $entity->{$field_name}['und'][0]['value'] = [];
 
     // look up id values of phylotree bundle(s) - should only be one, though
     $ptbundles = [];

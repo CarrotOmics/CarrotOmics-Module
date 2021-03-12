@@ -304,9 +304,9 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
       'required' => FALSE,
       'settings' => [
         'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
-        'base_table' => $bundle->data_table,
+        'chado_table' => $bundle->data_table,  // analysis
+        'chado_column' => $bundle->data_table . '_id', // analysis_id
+        'base_table' => $bundle->data_table,  // analysis
         'term_name' => 'local:analysis_project',
         'term_accession' => 'analysis_project',
         'term_vocabulary' => 'local',  // database name, not CV name

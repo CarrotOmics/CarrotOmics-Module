@@ -36,11 +36,11 @@ class local__project_analysis extends ChadoField {
     // to allow the site admin to change the term settings above.
     'term_fixed' => FALSE,
     // The table in Chado that the instance maps to.
-    'chado_table' => 'project',
+    'chado_table' => 'analysis',
     // The primary key column of the table in Chado.
-    'chado_column' => 'project_id',
+    'chado_column' => 'analysis_id',
     // The base table.
-    'base_table' => 'project',
+    'base_table' => 'analysis',
 
   ];
 
