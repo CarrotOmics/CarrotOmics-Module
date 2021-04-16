@@ -9,3 +9,43 @@
 //require('theme/carrotomics.theme.inc');
 //require('includes/carrotomics.utils.inc');
 require_once('includes/carrotomics.fields.inc');
+
+
+/**
+ * Implements hook_chado_schema_v1_3_table()
+ *
+ * Purpose: To add descriptions and foreign keys to default table description
+ * Note: This array will be merged with the array from all other implementations
+ *
+ * Here we add three columns to the nd_geolocation table to store uncertainty values
+ *
+ * @return
+ *    Array describing the nd_geolocation table
+ *
+ * @ingroup tripal_schema_api
+ */
+function carrotomics_chado_schema_v1_3_nd_geolocation() {
+file_put_contents( "/tmp/schema", date('h:i:s')." Called NEW carrotomics_chado_schema_v1_3_nd_geolocation()\n", FILE_APPEND ); //@@@
+
+  $description = [
+    'fields' => [
+      'latitude_dev' => [
+        'size' => 'normal',
+        'type' => 'float',
+        'not null' => FALSE,
+      ],
+      'longitude_dev' => [
+        'size' => 'normal',
+        'type' => 'float',
+        'not null' => FALSE,
+      ],
+      'altitude_dev' => [
+        'size' => 'normal',
+        'type' => 'float',
+        'not null' => FALSE,
+      ],
+    ],
+  ];
+
+  return $description;
+}

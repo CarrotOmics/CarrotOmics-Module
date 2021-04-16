@@ -1,8 +1,8 @@
 <?php
 /**
- * @file
+ * @carrotomics
  *
- * Installation of the file module
+ * Installation of the carrotomics module
  */
 
 
@@ -13,11 +13,30 @@ function carrotomics_requirements($phase) {
   $requirements = [];
   if ($phase == 'install') {
     if (!module_exists('tripal_core') and !module_exists('tripal')) {
-      $requirements['tripal_galaxy'] = [
-        'title' => "tripal_galaxy",
+      $requirements['carrotomics-tripal'] = [
+        'title' => "carrotomics",
         'value' => "ERROR: You must have Tripal v2 or v3 installed to use this module.",
         'severity' => REQUIREMENT_ERROR,
       ];
+    }
+    // Make sure chado is installed.
+    if (!$GLOBALS["chado_is_installed"]) {
+      $requirements['carrotomics-chado'] = [
+        'title' => "carrotomics",
+        'value' => "ERROR: Chado is not installed. Version 1.3 must be installed before this module can be enabled",
+        'severity' => REQUIREMENT_ERROR,
+      ];
+    }
+    // Requires chado version 1.3
+    else {
+      $chado_version = chado_get_version();
+      if ($chado_version < '1.3') {
+        $requirements['carrotomics-chado'] = [
+          'title' => "carrotomics",
+          'value' => "ERROR: Chado version is $chado_version, this module requires version 1.3",
+          'severity' => REQUIREMENT_ERROR,
+        ];
+      }
     }
   }
   return $requirements;
@@ -31,24 +50,60 @@ function carrotomics_requirements($phase) {
  * @ingroup carrotomics
  */
 function carrotomics_install() {
-
-  // Add the required cv terms
-  carrotomics_add_terms();
-
+  // Add columns to chado.nd_geolocation table
+  carrotomics_update_nd_geolocation();
+  // Add various required cv terms
+  carrotomics_add_cv_terms();
 }
 
 /**
+ * Implements hook_uninstall().
  *
+ * Performs actions when the module is uninstalled.
+ * Warning: data in new custom table columns will be lost!
+ *
+ * @ingroup carrotomics
  */
-function carrotomics_add_terms() {
+function carrotomics_uninstall() {
+  db_drop_field('chado.nd_geolocation', 'latitude_dev');
+  db_drop_field('chado.nd_geolocation', 'longitude_dev');
+  db_drop_field('chado.nd_geolocation', 'altitude_dev');
+}
+
+/**
+ * Add three new custom columns to chado.nd_geolocation table
+ * to store uncertainty (plus or minus) values
+ */
+function carrotomics_update_nd_geolocation() {
+  db_add_field('chado.nd_geolocation', 'latitude_dev', [
+    'type' => 'float',
+    'size' => 'normal',
+    'not null' => FALSE,
+  ]);
+  db_add_field('chado.nd_geolocation', 'longitude_dev', [
+    'type' => 'float',
+    'size' => 'normal',
+    'not null' => FALSE,
+  ]);
+  db_add_field('chado.nd_geolocation', 'altitude_dev', [
+    'type' => 'float',
+    'size' => 'normal',
+    'not null' => FALSE,
+  ]);
+}
+
+/**
+ * Add CV terms used by this module
+ */
+function carrotomics_add_cv_terms() {
   //
-  // CV entries
+  // Controlled Vocabulary entries
   //
   // The SIO cv does not need to be added because it is
   // automatically added by the base Tripal setup.
-  // Add the IAO cv
+  // Add the IAO controlled vocabulary
   chado_insert_cv('IAO', 'Information Artifact Ontology  is a new ontology of information entities, originally driven by work by the OBI digital entity and realizable information entity branch.');
-  // Add the EDAM cv
+  // Add the EDAM controlled vocabulary
   chado_insert_cv('EDAM', 'EDAM is an ontology of well established, familiar concepts that are prevalent within bioinformatics, including types of data and data identifiers, data formats, operations and topics. EDAM is a simple ontology - essentially a set of terms with synonyms and definitions - organised into an intuitive hierarchy for convenient use by curators, software developers and end-users. EDAM is suitable for large-scale semantic annotations and categorization of diverse bioinformatics resources. EDAM is also suitable for diverse application including for example within workbenches and workflow-management systems, software distributions, and resource registries.');
 
   //
