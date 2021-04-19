@@ -20,6 +20,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
 
   $term = tripal_load_term_entity(['term_id' => $bundle->term_id]);
   $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
+  $table_name = $bundle->data_table;
 
   // if germplasm or stock entity, then we'll attach our
   // fields to display the information
@@ -134,6 +135,43 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
         'type' => 'field_chado_storage',
       ],
       'settings' => [],
+    ];
+  }
+
+  // same as data__sequence_coordinates
+  if ( $table_name == 'feature' ) {
+//@@@if I wanted to limit page types I could do something like this:
+//@@@if ($term_accession == 'SO__0000234') // mRNA
+//@@@    or ($term_accession == 'SO__0000704') // gene
+//@@@    or ($term_accession == 'SO__0001645') ) { // marker
+    $field_name = 'data__jbrowse_coordinates';
+    $field_type = 'data__jbrowse_coordinates';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => 1,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
+  }
+
+
+  // obi__organism_linker field from tripal_manage_analyses module,
+  // to be used on a file entity from the tripal_file module
+  if ($term_accession == 'SIO__000396') {
+    $field_name = 'obi__organism_linker';
+    $field_type = 'obi__organism_linker';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
     ];
   }
 
@@ -328,6 +366,44 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     ];
   }
 
+  if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
+    $field_name = 'data__jbrowse_coordinates';
+    $field_type = 'data__jbrowse_coordinates';
+    $schema = chado_get_schema('featureloc');
+    $pkey = $schema['primary key'][0];
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'View location in JBrowse',
+      'description' => 'View this genome location in JBrowse',
+      'required' => FALSE,
+      'settings' => [
+        'auto_attach' => TRUE,
+        'chado_table' => 'featureloc',
+        'chado_column' => '$pkey',
+        'base_table' => 'feature',
+        'term_name' => 'JBrowse coordinates',
+        'term_accession' => '3002',
+        'term_vocabulary' => 'data',  // database name, not CV name
+      ],
+      'widget' => [
+        'type' => 'data__jbrowse_coordinates_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'data__jbrowse_coordinates_formatter',
+          'settings' => [
+            'title' => 'JBrowse coordinates',
+            'empty' => 'There are no JBrowse locations for this feature',
+          ],
+        ],
+      ],
+    ];
+  }
+
   if (isset($bundle->data_table) AND ($bundle->data_table == 'organism')) {
     $field_name = 'edam__accession';
     $field_type = 'edam__accession';
@@ -400,6 +476,41 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
       ],
     ];
 
+  }
+
+  // obi__organism_linker field from tripal_manage_analyses module,
+  // to be used on a file entity from the tripal_file module
+  if (isset($bundle->data_table) and ($bundle->data_table == 'file')) {
+    $field_name = 'obi__organism_linker';
+    $field_type = 'obi__organism_linker';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Organism',
+      'description' => 'Organism associated with this file',
+      'required' => FALSE,
+      'settings' => [
+        'term_vocabulary' => 'OBI',
+        'term_name' => 'organism',
+        'term_accession' => '0100026',
+        'auto_attach' => FALSE,
+        'chado_table' => 'organism_file',
+        'chado_column' => 'file_id',
+        'base_table' => 'file',
+      ],
+      'widget' => [
+        'type' => 'obi__organism_linker_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'hidden',
+          'type' => 'obi__organism_linker_formatter',
+          'settings' => [],
+        ],
+      ],
+    ];
   }
 
   return $instances;
