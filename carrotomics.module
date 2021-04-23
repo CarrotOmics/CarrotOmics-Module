@@ -25,7 +25,6 @@ require_once('includes/carrotomics.fields.inc');
  * @ingroup tripal_schema_api
  */
 function carrotomics_chado_schema_v1_3_nd_geolocation() {
-file_put_contents( "/tmp/schema", date('h:i:s')." Called NEW carrotomics_chado_schema_v1_3_nd_geolocation()\n", FILE_APPEND ); //@@@
 
   $description = [
     'fields' => [
@@ -43,6 +42,37 @@ file_put_contents( "/tmp/schema", date('h:i:s')." Called NEW carrotomics_chado_s
         'size' => 'normal',
         'type' => 'float',
         'not null' => FALSE,
+      ],
+    ],
+  ];
+
+  return $description;
+}
+
+/**
+ * Implements hook_chado_schema_v1_3_table()
+ *
+ * Purpose: To add descriptions and foreign keys to default table description
+ * Note: This array will be merged with the array from all other implementations
+ *
+ * Here we add a unique key constraint to the eimage table because
+ * there is none! This prevents using a bulk loader with "insert or update if duplicate" mode.
+ * This was added manually with:
+ * ALTER TABLE chado.eimage ADD CONSTRAINT eimage_c1 UNIQUE (eimage_data, eimage_type, image_uri);
+ *
+ * @return
+ *    Array describing the nd_geolocation table
+ *
+ * @ingroup tripal_schema_api
+ */
+function carrotomics_chado_schema_v1_3_eimage() {
+
+  $description = [
+    'unique keys' => [
+      'eimage_c1' => [
+        0 => 'eimage_data',
+        1 => 'eimage_type',
+        2 => 'image_uri',
       ],
     ],
   ];
