@@ -9,6 +9,9 @@
 //require('theme/carrotomics.theme.inc');
 //require('includes/carrotomics.utils.inc');
 require_once('includes/carrotomics.fields.inc');
+require_once('includes/admin/carrotomics.admin.inc');
+require_once('includes/admin/carrotomics.admin.sql.inc');
+require_once('includes/admin/carrotomics.admin.validate.inc');
 
 
 /**
@@ -78,4 +81,68 @@ function carrotomics_chado_schema_v1_3_eimage() {
   ];
 
   return $description;
+}
+
+/**
+ * Implementation of hook_access().
+ *
+ * Purpose: To restrict access to the CarrotOmics administrative pages
+ */
+function carrotomics_access($access_args) {
+  if (user_access($access_args)) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * Purpose: Defines the menu structure for the CarrotOmics administrative pages
+ */
+function carrotomics_menu() {
+  $items = [];
+
+  // Administrative Page Definitions
+  $weight = 0;
+
+  $items['admin/carrotomics'] = [
+    'title' => 'CarrotOmics',
+    'description' => 'Admin page for CarrotOmics',
+    'page callback' => 'carrotomics_admin_page',
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => $weight++,
+  ];
+
+  $items['admin/carrotomics/sql'] = [
+    'title' => 'SQL Functions',  // note that tab titles display in all upper-case
+    'description' => 'Custom SQL Functions to modify chado',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['carrotomics_admin_sql_form'],
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.sql.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => $weight++,
+  ];
+
+  // we need a second item for the tabs to show up
+  $items['admin/carrotomics/validate'] = [
+    'title' => 'Validation Functions',
+    'description' => 'Functions to find troublesome data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['carrotomics_admin_validate_form'],
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.validate.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => $weight++,
+  ];
+
+  return $items;
 }
