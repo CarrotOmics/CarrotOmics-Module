@@ -21,10 +21,10 @@ class edam__accession_widget extends ChadoFieldWidget {
     // The value presented to the user via load.
     // If $items['delta']['value'] is set then we are updating and already have this
     // information. As such, simply save it again.
-    $widget['value'] = array(
+    $widget['value'] = [
       '#type' => 'value',
       '#value' => array_key_exists($delta, $items) ? $items[$delta]['value'] : '',
-    );
+    ];
 
     // Pull out the value previously saved to be used as the default.
     $stock_id = 0;
