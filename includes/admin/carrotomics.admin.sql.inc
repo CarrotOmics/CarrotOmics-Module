@@ -31,13 +31,13 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'xxx_xxx' button
-  $form['xxx_xxx_btn'] = [
+  // Add a 'Clean MD5 Checksums' button
+  $form['clean_md5_btn'] = [
     '#type'   => 'submit',
-    '#name'   => 'xxx_xxx_btn',
-    '#value'  => 'Future Use',
-    '#prefix' => "<div><em>This button does nothing"
-                 . ".</em></div><br />",
+    '#name'   => 'clean_md5_btn',
+    '#value'  => 'Clean MD5 Checksums',
+    '#prefix' => "<div><em>Remove MD5 checksums of null strings from the feature table, these"
+                 . " have the value d41d8cd98f00b204e9800998ecf8427e</em></div><br />",
     '#suffix' => "<hr>",
   ];
 
@@ -71,8 +71,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
     drupal_set_message($status, $nerrors?'error':'status');
   }
-  else if ($triggering_element == 'xxx_xxx_btn') {
-    drupal_set_message(t('This button does not do anything'), 'error');
+  else if ($triggering_element == 'clean_md5_btn') {
+    [$nerrors, $status] = carrotomics_admin_remove_useless_checksums();
+    drupal_set_message($status, $nerrors?'error':'status');
   }
   else {
     drupal_set_message("Unknown button was pressed", 'error');
@@ -131,15 +132,20 @@ function carrotomics_admin_add_doi_url() {
       if ( preg_match('/^10\./', $doi) ) {
         // here we generate a new URL and add it
         $url = 'https://dx.doi.org/' . $doi;
-        $insertsql = "INSERT INTO {pubprop} (pub_id, type_id, value, rank)"
-                   . " VALUES (:pub_id, :type_id, :url, :rank)";
+        // equivalent SQL: INSERT INTO {pubprop} (pub_id, type_id, value, rank) VALUES ($pub_id, $type_id, $url, $rank);
+        $values = [ 'pub_id' => $pub_id,
+                    'type_id' => $type_id,
+                    'value' => $url,
+                    'rank' => $rank ];
         try {
-          $result = chado_query($insertsql, [':pub_id' => $pub_id,
-                                             ':type_id' => $type_id,
-                                             ':url' => $url,
-                                             ':rank' => $rank]);
-          $nadded++;
-        } catch (Exception $e){
+          $result = chado_insert_record('pubprop', $values);
+          if ($result) {
+            $nadded++;
+          }
+          else {
+            $nerrors++;
+          }
+        } catch (Exception $e) {
           $nerrors++;
           $errors .= '<br />' . $e->getMessage();
         }
@@ -149,4 +155,34 @@ function carrotomics_admin_add_doi_url() {
 
   $status = t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
+}
+
+/**
+ * Many features get a md5 checksum generated for a null string.
+ * These are not useful. This function will remove them.
+ *
+ */
+function carrotomics_admin_remove_useless_checksums() {
+  // equivalent SQL: UPDATE chado.feature SET md5checksum = NULL WHERE md5checksum = 'd41d8cd98f00b204e9800998ecf8427e';
+
+  $where = [ 'md5checksum' => 'd41d8cd98f00b204e9800998ecf8427e' ];
+  $newvalues = [ 'md5checksum' => NULL ];
+
+  // First get number of matching records that we will update, since
+  // chado_update_record only returns true or false
+  $resultarray = chado_select_record('feature', [], $where);
+  $nchanged = sizeof($resultarray);
+
+  // Now make the changes
+  try {
+    $success = chado_update_record('feature', $where, $newvalues);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  if ($success) {
+    return [0, "$nchanged records updated"];
+  }
+  else {
+    return [1, "$nchanged records to update, but something unexpected went wrong"];
+  }
 }
