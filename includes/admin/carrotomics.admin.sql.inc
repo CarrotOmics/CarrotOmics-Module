@@ -41,6 +41,22 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'GBS Marker Genome Locations' button
+  global $user;
+  $marker_loc_filename = 'public://mcl/user/'.$user->name.'/marker_loc.tsv';
+  $marker_loc_url = file_create_url($marker_loc_filename);
+  $form['gbs_location_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'gbs_location_btn',
+    '#value'  => 'GBS Marker Locations',
+    '#prefix' => "<div><em>For all GBS markers that do not have a genome location,"
+                 . " generate a Mainlab Chado Loader data matrix to use for the"
+                 . " marker_loc sheet, generated from all GBS markers that use the"
+                 . " naming scheme </em>MK012345 1_2345678</div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$marker_loc_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
   return $form;
 }
 
@@ -73,6 +89,10 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'clean_md5_btn') {
     [$nerrors, $status] = carrotomics_admin_remove_useless_checksums();
+    drupal_set_message($status, $nerrors?'error':'status');
+  }
+  else if ($triggering_element == 'gbs_location_btn') {
+    [$nerrors, $status] = carrotomics_admin_gbs_location();
     drupal_set_message($status, $nerrors?'error':'status');
   }
   else {
@@ -184,5 +204,59 @@ function carrotomics_admin_remove_useless_checksums() {
   }
   else {
     return [1, "$nchanged records to update, but something unexpected went wrong"];
+  }
+}
+
+/**
+ * Generate genome locations for GBS markers in the chado.featureloc table
+ *
+ */
+function carrotomics_admin_gbs_location() {
+  // It is hard to be sure which genome to use, so this function will just create
+  // a table, that can then be used to create a MCL file. Populate with
+  // default values for DCARv2 genome.
+  $genome = 'Carrot Genome Assembly DCARv2';  // default value for the "*genome" column
+  $genus = 'Daucus';
+  $species = 'carota';
+  $infraspecific_type = 'subspecies';
+  $infraspecific_name = 'sativus';
+  $headers = [ '*genome', '*chromosome', '*marker_name',
+               'genus', 'species', 'infraspecific_type', 'infraspecific_name',
+               'fmin', 'fmax', 'strand' ];
+
+  $sql = "SELECT F.feature_id, F.name FROM {feature} F LEFT JOIN {featureloc} L"
+       . " ON F.feature_id=L.feature_id WHERE F.name ~ '^MK\d+ \d_\d+$' AND L.featureloc_id IS NULL"
+       . " ORDER BY F.name";
+  $args = [];
+  $results = chado_query($sql, $args);
+
+  // initialize the output file conent
+  $content = implode("\t", $headers) . "\n";
+  $nfound = 0;
+
+  while ($obj = $results->fetchObject()) {
+    $nfound++;
+    $name = $obj->name;
+    // extract chromosome number and position. strand is left blank
+    preg_match('/(\d+)_(\d+)$/', $name, $matches);
+    $chromosome = 'DCARv2_Chr' . $matches[1];
+    $fmax = $matches[2];
+    $fmin = $fmax - 1;
+    $strand = '';
+    $cols = [ $genome, $chromosome, $name, $genus, $species, $infraspecific_type, $infraspecific_name,
+              $fmin, $fmax, $strand ];
+    $content .= implode("\t", $cols) . "\n";
+  }
+
+  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
+  global $user;
+  $marker_loc_filename = 'public://mcl/user/'.$user->name.'/marker_loc.tsv';
+  file_put_contents($marker_loc_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound markers found, download them from the link below the button"];
+  }
+  else {
+    return [0, "There were no markers found without genome locations"];
   }
 }
