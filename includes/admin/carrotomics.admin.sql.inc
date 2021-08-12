@@ -226,6 +226,8 @@ function carrotomics_admin_gbs_location() {
 
   $sql = "SELECT F.feature_id, F.name FROM {feature} F LEFT JOIN {featureloc} L"
        . " ON F.feature_id=L.feature_id WHERE F.name ~ '^MK\d+ \d_\d+$' AND L.featureloc_id IS NULL"
+       . " AND F.type_id=(SELECT cvterm_id FROM cvterm C WHERE C.name='genetic_marker'"
+       . " AND C.cv_id=(SELECT cv_id FROM cv WHERE name='sequence'))"
        . " ORDER BY F.name";
   $args = [];
   $results = chado_query($sql, $args);
