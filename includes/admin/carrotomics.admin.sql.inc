@@ -57,6 +57,16 @@ function carrotomics_admin_sql_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Generate QTL Abbreviations' button
+  $form['qtl_abbrev_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'qtl_abbrev_btn',
+    '#value'  => 'Generate QTL Abbreviations',
+    '#prefix' => "<div><em>Generate featureprop entries with MAIN::published_symbol cvterm"
+                 . " for all QTL lacking them, if they are of the format </em>MK012345 anytext</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   return $form;
 }
 
@@ -95,11 +105,31 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
     [$nerrors, $status] = carrotomics_admin_gbs_location();
     drupal_set_message($status, $nerrors?'error':'status');
   }
+  else if ($triggering_element == 'qtl_abbrev_btn') {
+    [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
+    drupal_set_message($status, $nerrors?'error':'status');
+  }
   else {
     drupal_set_message("Unknown button was pressed", 'error');
   }
 }
 
+
+/**
+ * Looks up a cvterm_id
+ */
+function carrotomics_admin_lookup_cvterm_id($cv_name, $cvterm_name) {
+  $sql = "SELECT cvterm_id FROM {cvterm} WHERE name = :cvterm_name AND cv_id=(SELECT cv_id FROM {cv} WHERE name = :cv_name)";
+  $typeresults = chado_query($sql, [':cv_name' => $cv_name, ':cvterm_name' => $cvterm_name]);
+  $obj = $typeresults->fetchObject();
+  if ($obj) {
+    return [0, $obj->cvterm_id];
+  }
+  else {
+    return [1, t('Error retrieving cvterm_id for "@cvterm_name" from cv "@cv_name"',
+                 ['@cvterm_name' => $cvterm_name, '@cv_name' => $cv_name])];
+  }
+}
 
 /**
  * For every publication that does not currently have a URL, see if it has
@@ -111,19 +141,8 @@ function carrotomics_admin_add_doi_url() {
   $errors = '';
 
   // get cvterm_id to use for URL as type_id in pubprop table
-  $cv_name = 'tripal_pub';
-  $cvterm_name = 'URL';
-  $sql = "SELECT cvterm_id FROM {cvterm} WHERE name = :cvterm_name AND cv_id=(SELECT cv_id FROM {cv} WHERE name = :cv_name)";
-  $typeresults = chado_query($sql, [':cv_name' => $cv_name, ':cvterm_name' => $cvterm_name]);
-  $obj = $typeresults->fetchObject();
-  if ($obj) {
-    $type_id = $obj->cvterm_id;
-  }
-  else {
-    $status = t('Error retrieving cvterm_id for "@cvterm_name" from cv "@cv_name"',
-                ['@cvterm_name' => $cvterm_name, '@cv_name' => $cv_name]);
-    return [1, $status];
-  }
+  [$error, $type_id] = carrotomics_admin_lookup_cvterm_id('tripal_pub', 'URL');
+  if ($error ){ return[$error, $type_id]; }
 
   // retrieve an array of all existing URL entries, key is pub_id
   $sql = "SELECT pub_id, value FROM {pubprop} WHERE type_id=$type_id";
@@ -261,4 +280,85 @@ function carrotomics_admin_gbs_location() {
   else {
     return [0, "There were no markers found without genome locations"];
   }
+}
+
+/**
+ * For every publication that does not currently have a URL, see if it has
+ * a DOI, and if so, construct a URL based on the DOI with
+ *   $url = 'https://dx.doi.org/' . $doi;
+ *
+ */
+function carrotomics_admin_qtl_abbrev() {
+  $errors = '';
+
+  // get cvterm_id for QTL
+  [$error, $qtl_type_id] = carrotomics_admin_lookup_cvterm_id('sequence', 'QTL');
+  if ($error ){ return[$error, $qtl_type_id]; }
+
+  // get cvterm_id to use for featureprop table from MAIN::published_symbol
+  [$error, $symbol_type_id] = carrotomics_admin_lookup_cvterm_id('MAIN', 'published_symbol');
+  if ($error ){ return[$error, $symbol_type_id]; }
+
+  // retrieve an array of all QTL lacking the published_symbol property
+  // the query retrieves all QTL featureprop, and in the loop flag those
+  // that already have a published_symbol
+  $sql = "SELECT DISTINCT F.feature_id, F.name, F.uniquename, FP.type_id FROM {feature} F"
+       . " LEFT JOIN {featureprop} FP ON F.feature_id=FP.feature_id"
+       . " WHERE F.type_id=:qtl_type_id";
+  $args = [':qtl_type_id' => $qtl_type_id];
+  $results = chado_query($sql, $args);
+  $qtls = [];
+  // we will often iterate the same feature_id multiple times due to multiple featureprop records
+  while ($obj = $results->fetchObject()) {
+    $qtls[$obj->feature_id]['name'] = $obj->uniquename;
+    if ($obj->type_id == $symbol_type_id) {
+      $qtls[$obj->feature_id]['exclude'] = 1;
+    }
+  }
+
+  // loop to add missing published_symbol entries to the featureprop table
+  $rank = 0;  // all added lines will have this rank value. Since they are new, there is no possibility of conflict
+  $nadded = 0;
+  $nskipped = 0;
+  $nerrors = 0;
+  foreach($qtls as $feature_id => $record) {
+    $uniquename = $record['name'];
+    $exclude = array_key_exists('exclude', $record);  // defined only when excluded
+    // skip if excluded because it already has a published_symbol
+    if (!$exclude) {
+      // Derive name by removing the 'MK012345 ' portion. If that's missing, skip it
+      if ( preg_match('/^MK\d{6} (.*)/', $uniquename, $matches) ) {
+        $published_symbol = $matches[1];
+        if ($published_symbol) {
+          $values = [ 'feature_id' => $feature_id,
+                      'type_id' => $symbol_type_id,
+                      'value' => $published_symbol,
+                      'rank' => $rank ];
+          try {
+            $result = chado_insert_record('featureprop', $values);
+            if ($result) {
+              $nadded++;
+            }
+            else {
+              $nerrors++;
+            }
+          } catch (Exception $e) {
+            $nerrors++;
+            $errors .= '<br />' . $e->getMessage();
+          }
+        }
+        else {
+          $errors .= "Unparseable name \"$uniquename\"<br>";
+          $nerrors++;
+        }
+      }
+      else {
+        $nskipped++;
+      }
+    }
+  }
+
+  $status = t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
+              ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
 }
