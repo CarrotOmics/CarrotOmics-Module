@@ -21,14 +21,14 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
   $term = tripal_load_term_entity(['term_id' => $bundle->term_id]);
   $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
   $table_name = $bundle->data_table;
-
   // if germplasm or stock entity, then we'll attach our
   // fields to display the information
   // CO_010 = Crop Germplasm Ontology
   if ( ($term_accession == 'CO_010__0000044')     // accession
     or ($term_accession == 'CO_010__0000029')     // cultivar
     or ($term_accession == 'CO_010__0000255')     // generated germplasm
-    or ($term_accession == 'CO_010__0000162') ) { // 414 inbred line
+    or ($term_accession == 'CO_010__0000162')     // 414 inbred line
+    or ($term_accession == 'MAIN__population') ) {// population
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
     $info[$field_name] = [
