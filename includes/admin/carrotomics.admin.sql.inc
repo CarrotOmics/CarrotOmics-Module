@@ -1,6 +1,6 @@
 <?php
 /**
- * Configure CarrotOmics module
+ * Custom functions for the CarrotOmics site
  *
  * @param $form
  * @param $form_state
@@ -45,9 +45,9 @@ function carrotomics_admin_sql_form($form, &$form_state) {
   global $user;
   $marker_loc_filename = 'public://mcl/user/'.$user->name.'/marker_loc.tsv';
   $marker_loc_url = file_create_url($marker_loc_filename);
-  $form['gbs_location_btn'] = [
+  $form['gbs_loc_btn'] = [
     '#type'   => 'submit',
-    '#name'   => 'gbs_location_btn',
+    '#name'   => 'gbs_loc_btn',
     '#value'  => 'GBS Marker Locations',
     '#prefix' => "<div><em>For all GBS markers that do not have a genome location,"
                  . " generate a Mainlab Chado Loader data matrix to use for the"
@@ -65,6 +65,25 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#prefix' => "<div><em>Generate featureprop entries with MAIN::published_symbol cvterm"
                  . " for all QTL lacking them, if they are of the format </em>MK012345 anytext</em></div><br />",
     '#suffix' => "<hr>",
+  ];
+
+  // Add a 'Generate 'Update stock_featuremap Table' button
+  //global $user; declared above
+  $stock_featuremap_filename = 'public://mcl/user/'.$user->name.'/stock_featuremap.tsv';
+  $stock_featuremap_url = file_create_url($stock_featuremap_filename);
+  $form['qtl_abbrev_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'stk_fmp_btn',
+    '#value'  => 'Update stock_featuremap Table',
+    '#prefix' => "<div><em>Use publication links to populate the </em>chado.stock_featuremap<em>"
+                 . " table. A publication may link to both a featuremap, as well as to one"
+                 . " or more stocks, which can be a population or parents of that population."
+                 . " The generated list must be manually curated before loading, because a publication"
+                 . " can link to more than one map, or a map may be referenced by multiple publications,"
+                 . " so extraneous items must be removed from the list."
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$stock_featuremap_url."\">here</a></div><br />"
+                 . "<hr>",
   ];
 
   return $form;
@@ -92,31 +111,37 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   // Gets the trigger element, i.e. which button was pressed
   $triggering_element = $form_state['triggering_element']['#name'];
 
-  // If the 'Generate publication URLs' button was clicked.
+  // Take action depending on which button was pressed
   if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
-    drupal_set_message($status, $nerrors?'error':'status');
   }
   else if ($triggering_element == 'clean_md5_btn') {
     [$nerrors, $status] = carrotomics_admin_remove_useless_checksums();
-    drupal_set_message($status, $nerrors?'error':'status');
   }
-  else if ($triggering_element == 'gbs_location_btn') {
+  else if ($triggering_element == 'gbs_loc_btn') {
     [$nerrors, $status] = carrotomics_admin_gbs_location();
-    drupal_set_message($status, $nerrors?'error':'status');
   }
   else if ($triggering_element == 'qtl_abbrev_btn') {
     [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
-    drupal_set_message($status, $nerrors?'error':'status');
+  }
+  else if ($triggering_element == 'stk_fmp_btn') {
+    [$nerrors, $status] = carrotomics_admin_populate_stock_featuremap();
   }
   else {
-    drupal_set_message("Unknown button was pressed", 'error');
+    [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
   }
+  drupal_set_message($status, $nerrors?'error':'status');
 }
 
 
 /**
- * Looks up a cvterm_id
+ * Looks up a cvterm_id from a cv and cvterm
+ * Returns an array. First value is 1 if error, 0 if success.
+ * Second value is error message if error, cvterm_id if success.
+ *
+ * @param $cv_name
+ * @param $cvterm_name
+ *
  */
 function carrotomics_admin_lookup_cvterm_id($cv_name, $cvterm_name) {
   $sql = "SELECT cvterm_id FROM {cvterm} WHERE name = :cvterm_name AND cv_id=(SELECT cv_id FROM {cv} WHERE name = :cv_name)";
@@ -197,7 +222,7 @@ function carrotomics_admin_add_doi_url() {
 }
 
 /**
- * Many features get a md5 checksum generated for a null string.
+ * Many features get an md5 checksum generated for a null string.
  * These are not useful. This function will remove them.
  *
  */
@@ -239,6 +264,7 @@ function carrotomics_admin_gbs_location() {
   $species = 'carota';
   $infraspecific_type = 'subspecies';
   $infraspecific_name = 'sativus';
+
   $headers = [ '*genome', '*chromosome', '*marker_name',
                'genus', 'species', 'infraspecific_type', 'infraspecific_name',
                'fmin', 'fmax', 'strand' ];
@@ -249,7 +275,11 @@ function carrotomics_admin_gbs_location() {
        . " AND C.cv_id=(SELECT cv_id FROM cv WHERE name='sequence'))"
        . " ORDER BY F.name";
   $args = [];
-  $results = chado_query($sql, $args);
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
 
   // initialize the output file conent
   $content = implode("\t", $headers) . "\n";
@@ -264,7 +294,8 @@ function carrotomics_admin_gbs_location() {
     $fmax = $matches[2];
     $fmin = $fmax - 1;
     $strand = '';
-    $cols = [ $genome, $chromosome, $name, $genus, $species, $infraspecific_type, $infraspecific_name,
+    $cols = [ $genome, $chromosome, $name,
+              $genus, $species, $infraspecific_type, $infraspecific_name,
               $fmin, $fmax, $strand ];
     $content .= implode("\t", $cols) . "\n";
   }
@@ -306,7 +337,11 @@ function carrotomics_admin_qtl_abbrev() {
        . " LEFT JOIN {featureprop} FP ON F.feature_id=FP.feature_id"
        . " WHERE F.type_id=:qtl_type_id";
   $args = [':qtl_type_id' => $qtl_type_id];
-  $results = chado_query($sql, $args);
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
   $qtls = [];
   // we will often iterate the same feature_id multiple times due to multiple featureprop records
   while ($obj = $results->fetchObject()) {
@@ -361,4 +396,67 @@ function carrotomics_admin_qtl_abbrev() {
   $status = t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
               ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
+}
+
+/**
+ * Generate a file to populate the chado.stock_featuremap table using publications to find the links.
+ *
+ */
+function carrotomics_admin_populate_stock_featuremap() {
+  // The first three columns are for the chado bulk loader. The other columns are
+  // information for the manual filtering process
+  $headers = ['featuremap_id', 'stock_id', 'type_id',
+              '(stock type)', '(pub_id)', '(map name)', '(stock name)', '(stock uniquename)'];
+
+  $sql = ' SELECT F.featuremap_id, F.name AS mapname, FP.pub_id, S.name AS stockname, S.uniquename, SP.stock_id, S.type_id, CV.name AS stocktype'
+       . ' FROM {featuremap} F'
+       . ' LEFT JOIN {featuremap_pub} FP ON F.featuremap_id=FP.featuremap_id'  // find publication(s) referencing this map
+       . ' LEFT JOIN {stock_pub} SP ON FP.pub_id=SP.pub_id'  // find stocks the publication refers to
+       . ' LEFT JOIN {stock} S ON SP.stock_id=S.stock_id'  // used to get type_id of stock
+       . ' LEFT JOIN {cvterm} CV ON S.type_id=CV.cvterm_id'  // used to get name of type of stock
+       . ' LEFT JOIN {stock_featuremap} SF ON SP.stock_id=SF.stock_id'  // used to find if already present in stock_featuremap
+       . ' WHERE SP.pub_ID IS NOT NULL'  // eliminates when publication does not refer to any stock
+       . ' AND SF.featuremap_id IS NULL'  // if not null it is already in stock_featuremap table, can skip
+       . ' ORDER BY F.featuremap_id, SP.stock_id';
+
+  try {
+    $results = chado_query($sql, []);
+  } catch (Exception $e) {
+    return[1, $e->getMessage()];
+  }
+
+  // initialize the output file conent
+  $content = implode("\t", $headers) . "\n";
+  $nfound = 0;
+  $seen = [];  // I can't easily DISTINCT with so many columns, remove duplicates in the loop
+
+  while ($obj = $results->fetchObject()) {
+    $key = $obj->featuremap_id . ':' . $obj->stock_id . ':' . $obj->type_id;
+    if (!array_key_exists($key, $seen)) {
+      $cols = [ $obj->featuremap_id,
+                $obj->stock_id,
+                $obj->type_id,
+                $obj->stocktype,
+                $obj->pub_id,
+                $obj->mapname,
+                $obj->stockname,
+                $obj->uniquename,
+              ];
+      $content .= implode("\t", $cols) . "\n";
+      $nfound++;
+      $seen[$key] = 1;
+    }
+  }
+
+  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
+  global $user;
+  $marker_loc_filename = 'public://mcl/user/'.$user->name.'/stock_featuremap.tsv';
+  file_put_contents($marker_loc_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound possible map to stock references found, download them from the link below the button"];
+  }
+  else {
+    return [0, "There were no map to stock references found"];
+  }
 }

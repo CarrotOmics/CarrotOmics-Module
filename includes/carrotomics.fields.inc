@@ -21,6 +21,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
   $term = tripal_load_term_entity(['term_id' => $bundle->term_id]);
   $term_accession = $term->vocab->vocabulary . '__' . $term->accession;
   $table_name = $bundle->data_table;
+
   // if germplasm or stock entity, then we'll attach our
   // fields to display the information
   // CO_010 = Crop Germplasm Ontology
@@ -164,6 +165,22 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
   if ($term_accession == 'SIO__000396') {
     $field_name = 'obi__organism_linker';
     $field_type = 'obi__organism_linker';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+    ];
+  }
+
+  // this was a conversion of the obi__organism_linker field from tripal_manage_analyses
+  // module into a linker to stock, such as a population linked to a genetic map
+  if ($term_accession == 'data__1278') { // featuremap
+    $field_name = 'main__stock_linker';
+    $field_type = 'main__stock_linker';
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -505,8 +522,43 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
       ],
       'display' => [
         'default' => [
-          'label' => 'hidden',
+          'label' => 'inline',
           'type' => 'obi__organism_linker_formatter',
+          'settings' => [],
+        ],
+      ],
+    ];
+  }
+
+  // this was a conversion of the obi__organism_linker field from tripal_manage_analyses
+  // module into a linker to stock, such as a population linked to a genetic map
+  if (isset($bundle->data_table) and ($bundle->data_table == 'featuremap')) {
+    $field_name = 'main__stock_linker';
+    $field_type = 'main__stock_linker';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Stock',
+      'description' => 'Stock associated with this ' . $bundle->data_table,
+      'required' => FALSE,
+      'settings' => [
+        'term_vocabulary' => 'MAIN',
+        'term_name' => 'stock',
+        'term_accession' => 'stock',
+        'auto_attach' => FALSE,
+        'chado_table' => 'stock_featuremap',
+        'chado_column' => 'stock_id',
+        'base_table' => $bundle->data_table,
+      ],
+      'widget' => [
+        'type' => 'main__stock_linker_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'main__stock_linker_formatter',
           'settings' => [],
         ],
       ],
