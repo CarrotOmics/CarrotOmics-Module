@@ -25,11 +25,13 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
   // if germplasm or stock entity, then we'll attach our
   // fields to display the information
   // CO_010 = Crop Germplasm Ontology
-  if ( ($term_accession == 'CO_010__0000044')     // accession
-    or ($term_accession == 'CO_010__0000029')     // cultivar
-    or ($term_accession == 'CO_010__0000255')     // generated germplasm
-    or ($term_accession == 'CO_010__0000162')     // 414 inbred line
-    or ($term_accession == 'MAIN__population') ) {// population
+  if ( ($term_accession == 'CO_010__0000044')      // accession
+    or ($term_accession == 'CO_010__0000029')      // cultivar
+    or ($term_accession == 'CO_010__0000255')      // generated germplasm
+    or ($term_accession == 'CO_010__0000162')      // 414 inbred line
+    or ($term_accession == 'MAIN__breeding_research_material')
+    or ($term_accession == 'MAIN__population') ) {
+
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
     $info[$field_name] = [
@@ -48,7 +50,20 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
+
+    $field_name = 'edam__genetic_map';
+    $field_type = 'edam__genetic_map';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one population can link to multiple maps
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -64,7 +79,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -84,7 +99,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -97,7 +112,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -113,7 +128,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -130,7 +145,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -150,7 +165,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => 1,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
@@ -173,6 +188,7 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       'storage' => [
         'type' => 'field_chado_storage',
       ],
+      'settings' => [],
     ];
   }
 
@@ -184,11 +200,12 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one map can link to multiple populations, i.e. merged maps
       'locked' => FALSE,
       'storage' => [
         'type' => 'field_chado_storage',
       ],
+      'settings' => [],
     ];
   }
 
@@ -209,8 +226,12 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
  */
 function carrotomics_bundle_instances_info($entity_type, $bundle) {
   $instances = [];
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'stock')) {
+  if (!isset($bundle->data_table)) {
+    return $instances;
+  }
 
+file_put_contents( "/dev/shm/map", "CP1 data table=\"".$bundle->data_table."\"\n", FILE_APPEND ); //@@@
+  if ($bundle->data_table == 'stock') {
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
     $instances[$field_name] = [
@@ -277,7 +298,43 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     ];
   }
 
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'biomaterial')) {
+  if ($bundle->data_table == 'stock') {
+    $field_name = 'edam__genetic_map';
+    $field_type = 'edam__genetic_map';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Map',
+      'description' => 'Genetic or Physical map of a genome',
+      'required' => FALSE,
+      'settings' => [
+        'auto_attach' => TRUE,
+        'chado_table' => 'stock_featuremap',
+        'chado_column' => 'stock_id',
+        'base_table' => $bundle->data_table,
+        'term_name' => 'Genetic Map',
+        'term_accession' => '1278',
+        'term_vocabulary' => 'data',  // database name, not CV name
+      ],
+      'widget' => [
+        'type' => 'edam__genetic_map_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'edam__genetic_map_formatter',
+          'settings' => [
+            'title' => 'Maps',
+            'empty' => 'This stock is not present in any genetic or physical maps',
+          ],
+        ],
+      ],
+    ];
+  }
+
+  if ($bundle->data_table == 'biomaterial') {
     $field_name = 'local__biomaterial_project';
     $field_type = 'local__biomaterial_project';
     $instances[$field_name] = [
@@ -313,7 +370,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     ];
   }
 
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'analysis')) {
+  if ($bundle->data_table == 'analysis') {
     $field_name = 'edam__phylogenetic_tree';
     $field_type = 'edam__phylogenetic_tree';
     $instances[$field_name] = [
@@ -383,7 +440,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     ];
   }
 
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'feature')) {
+  if ($bundle->data_table == 'feature') {
     $field_name = 'data__jbrowse_coordinates';
     $field_type = 'data__jbrowse_coordinates';
     $schema = chado_get_schema('featureloc');
@@ -421,7 +478,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     ];
   }
 
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'organism')) {
+  if ($bundle->data_table == 'organism') {
     $field_name = 'edam__accession';
     $field_type = 'edam__accession';
     $instances[$field_name] = [
@@ -458,7 +515,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
 
   }
 
-  if (isset($bundle->data_table) AND ($bundle->data_table == 'project')) {
+  if ($bundle->data_table == 'project') {
     $field_name = 'local__project_analysis';
     $field_type = 'local__project_analysis';
     $instances[$field_name] = [
@@ -497,7 +554,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
 
   // obi__organism_linker field from tripal_manage_analyses module,
   // to be used on a file entity from the tripal_file module
-  if (isset($bundle->data_table) and ($bundle->data_table == 'file')) {
+  if ($bundle->data_table == 'file') {
     $field_name = 'obi__organism_linker';
     $field_type = 'obi__organism_linker';
     $instances[$field_name] = [
@@ -532,7 +589,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
 
   // this was a conversion of the obi__organism_linker field from tripal_manage_analyses
   // module into a linker to stock, such as a population linked to a genetic map
-  if (isset($bundle->data_table) and ($bundle->data_table == 'featuremap')) {
+  if ($bundle->data_table == 'featuremap') {
     $field_name = 'main__stock_linker';
     $field_type = 'main__stock_linker';
     $instances[$field_name] = [
