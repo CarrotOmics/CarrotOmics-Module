@@ -31,6 +31,26 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Find Duplicate Publications' button
+  //global $user; declared above
+  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
+  $merge_pub_url = file_create_url($merge_pub_filename);
+  $form['merge_pub_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'merge_pub_btn',
+    '#value'  => 'Find Duplicate Publications',
+    '#prefix' => "<div><em>Loading publications from both Pubmed and National Ag Library can"
+                 . " result in duplicate instances of the same publication. This button will"
+                 . " generate a list of candidates that can be merged with the Mainlab Chado"
+                 . " Loader merge_pub template. Candidate duplications are found with a"
+                 . " combination of DOI and Title+page comparisons. The first column will"
+                 . " will be the publication to be kept, the second column is the publication"
+                 . " that will be deleted"
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
   // Add a 'Clean MD5 Checksums' button
   $form['clean_md5_btn'] = [
     '#type'   => 'submit',
@@ -83,26 +103,6 @@ function carrotomics_admin_sql_form($form, &$form_state) {
                  . " so extraneous items must be removed from the list."
                  . "</em></div><br />",
     '#suffix' => "<div>Download the generated list from <a href=\"".$stock_featuremap_url."\">here</a></div><br />"
-                 . "<hr>",
-  ];
-
-  // Add a 'Find Duplicate Publications' button
-  //global $user; declared above
-  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
-  $merge_pub_url = file_create_url($merge_pub_filename);
-  $form['merge_pub_btn'] = [
-    '#type'   => 'submit',
-    '#name'   => 'merge_pub_btn',
-    '#value'  => 'Find Duplicate Publications',
-    '#prefix' => "<div><em>Loading publications from both Pubmed and National Ag Library can"
-                 . " result in duplicate instances of the same publication. This button will"
-                 . " generate a list of candidates that can be merged with the Mainlab Chado"
-                 . " Loader merge_pub template. Candidate duplications are found with a"
-                 . " combination of DOI and Title+page comparisons. The first column will"
-                 . " will be the publication to be kept, the second column is the publication"
-                 . " that will be deleted"
-                 . "</em></div><br />",
-    '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
                  . "<hr>",
   ];
 
@@ -245,6 +245,184 @@ function carrotomics_admin_add_doi_url() {
 
   $status = t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
+}
+
+/**
+ * Generate a file to merge duplicate publications
+ *
+ */
+function carrotomics_admin_merge_publications() {
+  // The first three columns are for the Mainlab Chado Loader. The other columns are
+  // information for the manual filtering process
+  $headers = ['*pub_id_base', '*pub_id', 'delete',
+              '(property)', '(duplicated value)',
+              '(year_base)', '(year)',
+              '(volume_base)', '(volume)',
+              '(issue_base)', '(issue)',
+              '(page_base)', '(page)',
+              '(journal_base)', '(journal)',
+              '(title_base)', '(title)'];
+  // characters to remove to make a title hash key
+  // sometimes one version of a title ends in a period, other times it doesn't
+  $titlehashpattern = ['/\.+/', '/\s+/'];
+
+  // this will store key=>lower pub_id value=>[higher pub_id, info]
+  $candidates = [];
+  $pub_info = [];  // cache of other information from each pub, key is pub_id
+
+  // Duplicate detection part 1 = based on specific properties
+  // these cvterms will be used to find duplicates, based on just that single value
+  $cvtermnames = ['DOI', 'Elocation', 'URL'];
+  foreach ($cvtermnames as $cvtermname) {
+    $sql = "SELECT A.pub_id, A.value, A.rank,"
+         . " P.title, P.series_name, P.pyear, P.volume, P.issue, P.pages"
+         . " FROM {pubprop} A"
+         . " JOIN (SELECT value, count(*) FROM {pubprop} PP"
+         . " WHERE PP.type_id="
+         . "  (SELECT cvterm_id FROM {cvterm} CVT WHERE cv_id=(SELECT cv_id FROM {cv} CV"
+         . "   WHERE CV.name=:cvname) AND CVT.name=:cvtermname)"
+         . " GROUP BY value HAVING COUNT(*) > 1) B ON A.value=B.value"
+         . " LEFT JOIN {pub} P ON A.pub_id=P.pub_id"
+         . " ORDER BY A.value, A.pub_id";
+    $args = [':cvname' => 'tripal_pub', ':cvtermname' => $cvtermname];
+
+    try {
+      $results = chado_query($sql, $args);
+    } catch (Exception $e) {
+      return[1, $e->getMessage()];
+    }
+
+    // Based on the SQL there will be at least two duplicates of a given
+    // value, but there may be more. For each set of duplicates, we will
+    // store to the candidates hash, with the lowest pub_id as the key.
+    // The SQL is sorted, so the first one will always be the lowest pub_id.
+    $prevvalue = '';
+    $first_pub_id = '';
+    while ($obj = $results->fetchObject()) {
+      $pub_id = $obj->pub_id;
+      $value = $obj->value;
+
+      if ($value != $prevvalue) {
+        // first of a new set of duplicates, just save the pub_id
+        $first_pub_id = $pub_id;
+        $prevvalue = $value;
+      }
+      else {
+        // second or later of a set of duplicates
+        $candidates[$first_pub_id][] = [$pub_id, $cvtermname, $obj->value];
+      }
+    }
+  }  // foreach $cvtermnames
+
+  // Duplicate detection part 2 = based on title
+  // Try to find duplicates based just on nearly identical titles combined
+  // with starting page number
+  $sql = "SELECT P.pub_id, P.title, P.series_name, P.pyear, P.volume, P.issue, P.pages"
+       . " FROM {pub} P"
+       . " ORDER BY P.pub_id";
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return[1, $e->getMessage()];
+  }
+
+  // load every publication and store by processed title + page
+  $titlehash = [];
+  while ($obj = $results->fetchObject()) {
+    $pub_id = $obj->pub_id;
+
+    // cache other information from pub for output file
+    $pub_info[$pub_id]['year'] = $obj->pyear;
+    $pub_info[$pub_id]['volume'] = $obj->volume;
+    $pub_info[$pub_id]['issue'] = $obj->issue;
+    $pub_info[$pub_id]['firstpage'] = preg_replace('/\-.*/', '', $obj->pages);
+    $pub_info[$pub_id]['journal'] = $obj->series_name;
+    $pub_info[$pub_id]['title'] = $obj->title;
+
+    $title = preg_replace($titlehashpattern, [], strtolower($obj->title));
+    $page = preg_replace('/\-.*/', '', $obj->pages);
+    if ($title) {
+      $key = $title . '.' . $page;
+      $titlehash[$key][] = $pub_id;
+    }
+  }
+
+  // now look for titlehash keys with more than one value
+  foreach ($titlehash as $key => $arrayref) {
+    if ( count($arrayref) > 1 ) {
+      $pub_ids = $arrayref;
+      sort($pub_ids);  // get lowest pub_id as first element
+      for ($i=1; $i<count($pub_ids); $i++) {
+        $candidates[$pub_ids[0]][] = [$pub_ids[$i], 'matching title', ''];
+      }
+    }
+  }
+
+  // initialize the output file conent
+  $content = implode("\t", $headers) . "\n";
+  $nfound = 0;
+
+  // populate output file
+  ksort($candidates);
+  foreach ($candidates as $pub_id => $arrayref) {
+    foreach ($arrayref as $idandvalue) {
+      $dup_pub_id = $idandvalue[0];
+      $dup_pub_cvterm = $idandvalue[1];
+      $dup_pub_value = $idandvalue[2];
+      $cols = [ $pub_id, $dup_pub_id, 'yes',
+                $dup_pub_cvterm, $dup_pub_value ];
+      // additional informational columns
+      $coltypes = ['year', 'volume', 'issue', 'firstpage', 'journal', 'title'];
+      $flip_base_votes = 0;
+      foreach ($coltypes as $coltype) {
+        $left = $pub_info[$pub_id][$coltype];
+        $right = $pub_info[$dup_pub_id][$coltype];
+        if ($coltype == 'title') {
+          // for title, case insensitive, and ignore white space and periods
+          if (preg_replace($titlehashpattern, [], strtolower($left)) == preg_replace($titlehashpattern, [], strtolower($right))) {
+            $right = '=';
+          }
+        }
+        else {
+          // If one publication has volume, page, etc and the other doesn't,
+          // then that one should become the base_id. Vote on it
+          if (($left) and (!$right)) {
+            $flip_base_votes--;  // negative = don't flip
+          }
+          elseif ((!$left) and ($right)) {
+            $flip_base_votes++;  // positive = do flip
+          }
+          // if equal, abbreviate the second copy
+          elseif (($left) and ($right) and ($left == $right)) {
+            $right = '=';
+          }
+        }
+        $cols[] = $left;
+        $cols[] = $right;
+      }
+      // check votes, and if positive swap (flip) pub_id_base and pub_id
+      if ($flip_base_votes > 0) {
+        $tmp = $cols[0];
+        $cols[0] = $cols[1];
+        $cols[1] = $tmp;
+      }
+      $content .= implode("\t", $cols) . "\n";
+      $nfound++;
+    }
+  }
+
+  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
+  global $user;
+  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
+  file_put_contents($merge_pub_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound publications may need to be merged, download them from the link below the button"];
+  }
+  else {
+    return [0, "There were no publications found that are candidates for merging"];
+  }
 }
 
 /**
@@ -485,183 +663,5 @@ function carrotomics_admin_populate_stock_featuremap() {
   }
   else {
     return [0, "There were no map to stock references found"];
-  }
-}
-
-/**
- * Generate a file to merge duplicate publications
- *
- */
-function carrotomics_admin_merge_publications() {
-  // The first three columns are for the Mainlab Chado Loader. The other columns are
-  // information for the manual filtering process
-  $headers = ['*pub_id_base', '*pub_id', 'delete',
-              '(property)', '(duplicated value)',
-              '(year_base)', '(year)',
-              '(volume_base)', '(volume)',
-              '(issue_base)', '(issue)',
-              '(page_base)', '(page)',
-              '(journal_base)', '(journal)',
-              '(title_base)', '(title)'];
-  // characters to remove to make a title hash key
-  // sometimes one version of a title ends in a period, other times it doesn't
-  $titlehashpattern = ['/\.+/', '/\s+/'];
-
-  // this will store key=>lower pub_id value=>[higher pub_id, info]
-  $candidates = [];
-  $pub_info = [];  // cache of other information from each pub, key is pub_id
-
-  // Duplicate detection part 1 = based on specific properties
-  // these cvterms will be used to find duplicates, based on just that single value
-  $cvtermnames = ['DOI', 'Elocation', 'URL'];
-  foreach ($cvtermnames as $cvtermname) {
-    $sql = "SELECT A.pub_id, A.value, A.rank,"
-         . " P.title, P.series_name, P.pyear, P.volume, P.issue, P.pages"
-         . " FROM {pubprop} A"
-         . " JOIN (SELECT value, count(*) FROM {pubprop} PP"
-         . " WHERE PP.type_id="
-         . "  (SELECT cvterm_id FROM {cvterm} CVT WHERE cv_id=(SELECT cv_id FROM {cv} CV"
-         . "   WHERE CV.name=:cvname) AND CVT.name=:cvtermname)"
-         . " GROUP BY value HAVING COUNT(*) > 1) B ON A.value=B.value"
-         . " LEFT JOIN {pub} P ON A.pub_id=P.pub_id"
-         . " ORDER BY A.value, A.pub_id";
-    $args = [':cvname' => 'tripal_pub', ':cvtermname' => $cvtermname];
-
-    try {
-      $results = chado_query($sql, $args);
-    } catch (Exception $e) {
-      return[1, $e->getMessage()];
-    }
-
-    // Based on the SQL there will be at least two duplicates of a given
-    // value, but there may be more. For each set of duplicates, we will
-    // store to the candidates hash, with the lowest pub_id as the key.
-    // The SQL is sorted, so the first one will always be the lowest pub_id.
-    $prevvalue = '';
-    $first_pub_id = '';
-    while ($obj = $results->fetchObject()) {
-      $pub_id = $obj->pub_id;
-      $value = $obj->value;
-
-      if ($value != $prevvalue) {
-        // first of a new set of duplicates, just save the pub_id
-        $first_pub_id = $pub_id;
-        $prevvalue = $value;
-      }
-      else {
-        // second or later of a set of duplicates
-        $candidates[$first_pub_id][] = [$pub_id, $cvtermname, $obj->value];
-      }
-    }
-  }  // foreach $cvtermnames
-
-  // Duplicate detection part 2 = based on title
-  // Try to find duplicates based just on nearly identical titles combined
-  // with starting page number
-  $sql = "SELECT P.pub_id, P.title, P.series_name, P.pyear, P.volume, P.issue, P.pages"
-       . " FROM {pub} P"
-       . " ORDER BY P.pub_id";
-  $args = [];
-  try {
-    $results = chado_query($sql, $args);
-  } catch (Exception $e) {
-    return[1, $e->getMessage()];
-  }
-
-  // load every publication and store by processed title + page
-  $titlehash = [];
-  while ($obj = $results->fetchObject()) {
-    $pub_id = $obj->pub_id;
-
-    // cache other information from pub for output file
-    $pub_info[$pub_id]['year'] = $obj->pyear;
-    $pub_info[$pub_id]['volume'] = $obj->volume;
-    $pub_info[$pub_id]['issue'] = $obj->issue;
-    $pub_info[$pub_id]['firstpage'] = preg_replace('/\-.*/', '', $obj->pages);
-    $pub_info[$pub_id]['journal'] = $obj->series_name;
-    $pub_info[$pub_id]['title'] = $obj->title;
-
-    $title = preg_replace($titlehashpattern, [], strtolower($obj->title));
-    $page = preg_replace('/\-.*/', '', $obj->pages);
-    if ($title) {
-      $key = $title . '.' . $page;
-      $titlehash[$key][] = $pub_id;
-    }
-  }
-
-  // now look for titlehash keys with more than one value
-  foreach ($titlehash as $key => $arrayref) {
-    if ( count($arrayref) > 1 ) {
-      $pub_ids = $arrayref;
-      sort($pub_ids);  // get lowest pub_id as first element
-      for ($i=1; $i<count($pub_ids); $i++) {
-        $candidates[$pub_ids[0]][] = [$pub_ids[$i], 'matching title', ''];
-      }
-    }
-  }
-
-  // initialize the output file conent
-  $content = implode("\t", $headers) . "\n";
-  $nfound = 0;
-
-  // populate output file
-  ksort($candidates);
-  foreach ($candidates as $pub_id => $arrayref) {
-    foreach ($arrayref as $idandvalue) {
-      $dup_pub_id = $idandvalue[0];
-      $dup_pub_cvterm = $idandvalue[1];
-      $dup_pub_value = $idandvalue[2];
-      $cols = [ $pub_id, $dup_pub_id, 'yes',
-                $dup_pub_cvterm, $dup_pub_value ];
-      // additional informational columns
-      $coltypes = ['year', 'volume', 'issue', 'firstpage', 'journal', 'title'];
-      $flip_base_votes = 0;
-      foreach ($coltypes as $coltype) {
-        $left = $pub_info[$pub_id][$coltype];
-        $right = $pub_info[$dup_pub_id][$coltype];
-        if ($coltype == 'title') {
-          // for title, case insensitive, and ignore white space and periods
-          if (preg_replace($titlehashpattern, [], strtolower($left)) == preg_replace($titlehashpattern, [], strtolower($right))) {
-            $right = '=';
-          }
-        }
-        else {
-          // If one publication has volume, page, etc and the other doesn't,
-          // then that one should become the base_id. Vote on it
-          if (($left) and (!$right)) {
-            $flip_base_votes--;  // negative = don't flip
-          }
-          elseif ((!$left) and ($right)) {
-            $flip_base_votes++;  // positive = do flip
-          }
-          // if equal, abbreviate the second copy
-          elseif (($left) and ($right) and ($left == $right)) {
-            $right = '=';
-          }
-        }
-        $cols[] = $left;
-        $cols[] = $right;
-      }
-      // check votes, and if positive swap (flip) pub_id_base and pub_id
-      if ($flip_base_votes > 0) {
-        $tmp = $cols[0];
-        $cols[0] = $cols[1];
-        $cols[1] = $tmp;
-      }
-      $content .= implode("\t", $cols) . "\n";
-      $nfound++;
-    }
-  }
-
-  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
-  global $user;
-  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
-  file_put_contents($merge_pub_filename, $content);
-
-  if ( $nfound ) {
-    return [0, "$nfound publications may need to be merged, download them from the link below the button"];
-  }
-  else {
-    return [0, "There were no publications found that are candidates for merging"];
   }
 }
