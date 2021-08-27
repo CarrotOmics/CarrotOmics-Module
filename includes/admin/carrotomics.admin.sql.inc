@@ -16,6 +16,8 @@ function carrotomics_admin_sql_form($form, &$form_state) {
   $breadcrumb[] = l('CarrotOmics', 'admin/carrotomics/sql');
   drupal_set_breadcrumb($breadcrumb);
 
+  global $user;  // used for output file location
+
   // Create the form
   $form = [];
 
@@ -24,31 +26,48 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#type'   => 'submit',
     '#name'   => 'pub_url_btn',
     '#value'  => 'Generate publication URLs',
-    '#prefix' => '<div><em>This button will generate a URL for any publication lacking one,'
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'This button will generate a URL for any publication lacking one,'
                  . ' if it has a DOI defined. The URL will be constructed by concatenating'
                  . ' "https://dx.doi.org/" with the DOI.<br />For example, for the DOI'
-                 . ' "10.1038/ng.3565" the URL becomes "https://dx.doi.org/10.1038/ng.3565"</em></div><br />',
+                 . ' "10.1038/ng.3565" the URL becomes "https://dx.doi.org/10.1038/ng.3565"'
+                 . '</em></div><br />',
     '#suffix' => "<hr>",
   ];
 
   // Add a 'Find Duplicate Publications' button
-  //global $user; declared above
   $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
   $merge_pub_url = file_create_url($merge_pub_filename);
   $form['merge_pub_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'merge_pub_btn',
     '#value'  => 'Find Duplicate Publications',
-    '#prefix' => "<div><em>Loading publications from both Pubmed and National Ag Library can"
-                 . " result in duplicate instances of the same publication. This button will"
-                 . " generate a list of candidates that can be merged with the Mainlab Chado"
-                 . " Loader merge_pub template. Candidate duplications are found with a"
-                 . " combination of DOI and Title+page comparisons. The first column will"
-                 . " will be the publication to be kept, the second column is the publication"
-                 . " that will be deleted"
-                 . "</em></div><br />",
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'Loading publications from both Pubmed and National Ag Library can'
+                 . ' result in duplicate instances of the same publication. This button will'
+                 . ' generate a list of candidates that can be merged with the Mainlab Chado'
+                 . ' Loader merge_pub template. Candidate duplications are found with a'
+                 . ' combination of DOI and Title+page comparisons. The first column will'
+                 . ' will be the publication to be kept, the second column is the publication'
+                 . ' that will be deleted'
+                 . '</em></div><br />',
     '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
                  . "<hr>",
+  ];
+
+  // Add a 'Update publication Unique Local Identifier' button
+  $form['pub_uli_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'pub_uli_btn',
+    '#value'  => 'Update publication Unique Local Identifier',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "The \"uniquename\" column in the chado.pub table is named"
+                 . " \"Unique Local Identifier\" in the widget. These values are not displayed"
+                 . " to the end user. The publication loaders generate this to be the publication"
+                 . " citation, which is long, and it is not used on CarrotOmics."
+                 . " Replace these with the pub_id value."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
   ];
 
   // Add a 'Clean MD5 Checksums' button
@@ -56,20 +75,21 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#type'   => 'submit',
     '#name'   => 'clean_md5_btn',
     '#value'  => 'Clean MD5 Checksums',
-    '#prefix' => "<div><em>Remove MD5 checksums of null strings from the feature table, these"
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Remove MD5 checksums of null strings from the feature table, these"
                  . " have the value d41d8cd98f00b204e9800998ecf8427e</em></div><br />",
     '#suffix' => "<hr>",
   ];
 
   // Add a 'GBS Marker Genome Locations' button
-  global $user;
   $marker_loc_filename = 'public://mcl/user/'.$user->name.'/marker_loc.tsv';
   $marker_loc_url = file_create_url($marker_loc_filename);
   $form['gbs_loc_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'gbs_loc_btn',
     '#value'  => 'GBS Marker Locations',
-    '#prefix' => "<div><em>For all GBS markers that do not have a genome location,"
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "For all GBS markers that do not have a genome location,"
                  . " generate a Mainlab Chado Loader data matrix to use for the"
                  . " marker_loc sheet, generated from all GBS markers that use the"
                  . " naming scheme </em>MK012345 1_2345678</div><br />",
@@ -82,20 +102,21 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#type'   => 'submit',
     '#name'   => 'qtl_abbrev_btn',
     '#value'  => 'Generate QTL Abbreviations',
-    '#prefix' => "<div><em>Generate featureprop entries with MAIN::published_symbol cvterm"
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate featureprop entries with MAIN::published_symbol cvterm"
                  . " for all QTL lacking them, if they are of the format </em>MK012345 anytext</em></div><br />",
     '#suffix' => "<hr>",
   ];
 
   // Add a 'Generate 'Update stock_featuremap Table' button
-  //global $user; declared above
   $stock_featuremap_filename = 'public://mcl/user/'.$user->name.'/stock_featuremap.tsv';
   $stock_featuremap_url = file_create_url($stock_featuremap_filename);
   $form['stk_fmp_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'stk_fmp_btn',
     '#value'  => 'Update stock_featuremap Table',
-    '#prefix' => "<div><em>Use publication links to populate the </em>chado.stock_featuremap<em>"
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Use publication links to populate the </em>chado.stock_featuremap<em>"
                  . " table. A publication may link to both a featuremap, as well as to one"
                  . " or more stocks, which can be a population or parents of that population."
                  . " The generated list must be manually curated before loading, because a publication"
@@ -135,6 +156,12 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
   }
+  else if ($triggering_element == 'merge_pub_btn') {
+    [$nerrors, $status] = carrotomics_admin_merge_publications();
+  }
+  else if ($triggering_element == 'pub_uli_btn') {
+    [$nerrors, $status] = carrotomics_admin_pub_uli();
+  }
   else if ($triggering_element == 'clean_md5_btn') {
     [$nerrors, $status] = carrotomics_admin_remove_useless_checksums();
   }
@@ -146,9 +173,6 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'stk_fmp_btn') {
     [$nerrors, $status] = carrotomics_admin_populate_stock_featuremap();
-  }
-  else if ($triggering_element == 'merge_pub_btn') {
-    [$nerrors, $status] = carrotomics_admin_merge_publications();
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -423,6 +447,50 @@ function carrotomics_admin_merge_publications() {
   else {
     return [0, "There were no publications found that are candidates for merging"];
   }
+}
+
+/**
+ * Change the Unique Local Identifier to be pub_id
+ *
+ */
+function carrotomics_admin_pub_uli() {
+  $errors = '';
+
+  // Find the publications needing to be updated
+  $sql = "SELECT pub_id, uniquename FROM {pub} P"
+       . " WHERE NOT pub_id::text=uniquename";
+  $args = [];
+  $results = chado_query($sql, $args);
+
+  // Loop and make changes, keeping track of the number of changes made
+  $nchanged = 0;
+  $nerrors = 0;
+  while ($obj = $results->fetchObject()) {
+    $pub_id = $obj->pub_id;
+    $uniquename = $obj->uniquename;
+    $where = [ 'pub_id' => $pub_id ];
+    $newvalues = [ 'uniquename' => $pub_id ];
+    try {
+      $success = chado_update_record('pub', $where, $newvalues);
+      if ($success) { 
+        $nchanged++;
+      }
+      else {
+        $nerrors++;
+      }
+    } catch (Exception $e) {
+      $nerrors++;
+      $errors = '<br>' . $e->getMessage();
+    }
+  }
+
+  if ($nchanged or $nerrors) {
+    $status = t('Changed @nchanged uniquename values, @nerrors errors', ['@nchanged' => $nchanged, '@nerrors' => $nerrors]);
+  }
+  else {
+    $status = t('No changes were needed');
+  }
+  return [$nerrors, $status . $errors];
 }
 
 /**

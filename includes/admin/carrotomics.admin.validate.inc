@@ -24,7 +24,8 @@ function carrotomics_admin_validate_form($form, &$form_state) {
     '#type'   => 'submit',
     '#name'   => 'find_unpub_btn',
     '#value'  => 'Find Unpublished Content',
-    '#prefix' => "<div><em>List any Tripal content types that have unpublished content"
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "List any Tripal content types that have unpublished content"
                  . "</em></div><br />",
     '#suffix' => "<hr>",
   ];
