@@ -30,6 +30,19 @@ function carrotomics_admin_validate_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Validate public:// fileloc entries' button
+  $form['val_fileloc_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'val_fileloc_btn',
+    '#value'  => 'Validate public:// chado.fileloc entries',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Validate all files stored locally using the public:// URL"
+                 . " nomenclature that are listed in the chado.fileloc table."
+                 . " File presence, read permission, size, and MD5 checksum are validated."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   return $form;
 }
 
@@ -56,6 +69,10 @@ function carrotomics_admin_validate_form_submit($form, &$form_state) {
 
   if ($triggering_element == 'find_unpub_btn') {
     [$nerrors, $status] = carrotomics_admin_find_unpublished();
+    drupal_set_message($status, $nerrors?'error':'status');
+  }
+  elseif ($triggering_element == 'val_fileloc_btn') {
+    [$nerrors, $status] = carrotomics_admin_validate_fileloc();
     drupal_set_message($status, $nerrors?'error':'status');
   }
   else {
@@ -210,5 +227,87 @@ function carrotomics_admin_find_unpublished() {
   }
   else {
     return [0, "There are no tripal content types that need to be published"];
+  }
+}
+
+/**
+ * Find any tripal content types that need to be published.
+ *
+ */
+function carrotomics_admin_validate_fileloc() {
+  // Ensure that all URLs in the chado.fileloc table using the public://
+  // method of access are present. checksums and file sizes are checked
+  // for correctness
+
+  // Ihe output message will be a list of problems found.
+  // It will be empty if everything is correct.
+  $outputmessage = '';
+  $nchecked = 0;
+  $nerrors = 0;
+
+  // get the base path of where public:// points
+  $files_path = variable_get('file_public_path', conf_path() . '/files');
+
+  // get a list of files to check, order by file_id for a somewhat chronological list,
+  // then check each one
+  $sql = "SELECT file_id, uri, md5checksum, size FROM {fileloc} ORDER BY file_id";
+  $results = chado_query($sql, []);
+  $file_list = [];
+  while ($obj = $results->fetchObject()) {
+    $uri = $obj->uri;
+    // we only validate local files using public:// prefix
+    if (preg_match('|^public://|', $uri)) {
+      $nchecked++;
+      $file_id = $obj->file_id;
+      $md5checksum = $obj->md5checksum;
+      $size = $obj->size;
+      $real_path = $files_path . preg_replace('|^public://|', '/', $uri);
+      $entity = chado_get_record_entity_by_table('file', $file_id);
+      $entity_url = "/file/$entity";  // to_do: I bet there's a more correct way to do this
+      // 1. validate existence
+      if (!file_exists($real_path)) {
+        $outputmessage .= "<br>File not present \"<a href=\"$entity_url\">$uri</a>\"";
+        $nerrors++;
+      }
+      // 2. validate file permissions
+      elseif (!is_readable($real_path)) {
+        $outputmessage .= "<li>File permission problem for \"<a href=\"$entity_url\">$uri</a>\", file is not readable</li>";
+        $nerrors++;
+      }
+      else {
+        // 3. validate size
+        $actualsize = filesize($real_path);
+        if ($size != $actualsize) {
+          $outputmessage .= "<li>Size stored for file \"<a href=\"$entity_url\">$uri</a>\" $size is different than actual size $actualsize</li>";
+          $nerrors++;
+        }
+        // 4. warn if no md5 checksum. When missing in chado.fileloc,
+        // it is still defined as a string of 32 space characters
+        elseif ((!$md5checksum) or (preg_match('/ /', $md5checksum))) {
+          $outputmessage .= "<li>There is no valid MD5 checksum stored for file \"<a href=\"$entity_url\">$uri</a>\"</li>";
+          $nerrors++;
+        }
+        else {
+          // 5. validate md5 checksum
+          try {
+            $actualmd5checksum = md5_file($real_path);
+            if ($md5checksum != $actualmd5checksum) {
+              $outputmessage .= "<li>MD5 checksum \"$md5checksum\" stored for file \"<a href=\"$entity_url\">$uri</a>\" $md5checksum is different than actual checksum \"$actualmd5checksum\"</li>";
+              $nerrors++;
+            }
+          } catch (Exception $e) {
+            $outputmessage .= "<li>File read error for file \"<a href=\"$entity_url\">$uri</a>\" ".$e->getMessage()."</li>";
+            $nerrors++;
+          }
+        }
+      }
+    }
+  }
+
+  if ($outputmessage) {
+    return [1, "$nerrors errors found<ol>$outputmessage</ol>"];
+  }
+  else {
+    return [0, "$nchecked public:// files checked, there were no problems found"];
   }
 }
