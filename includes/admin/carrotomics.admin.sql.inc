@@ -279,6 +279,7 @@ function carrotomics_admin_merge_publications() {
   // The first three columns are for the Mainlab Chado Loader. The other columns are
   // information for the manual filtering process
   $headers = ['*pub_id_base', '*pub_id', 'delete',
+              '(entity_base)', '(entity)',
               '(property)', '(duplicated value)',
               '(year_base)', '(year)',
               '(volume_base)', '(volume)',
@@ -325,6 +326,10 @@ function carrotomics_admin_merge_publications() {
     while ($obj = $results->fetchObject()) {
       $pub_id = $obj->pub_id;
       $value = $obj->value;
+      // consider http:// and https:// equivalent for our comparisons
+      if ($cvtermname == 'URL') {
+        $value = preg_replace('|^http://|i', 'https://', $value);
+      }
 
       if ($value != $prevvalue) {
         // first of a new set of duplicates, just save the pub_id
@@ -333,7 +338,7 @@ function carrotomics_admin_merge_publications() {
       }
       else {
         // second or later of a set of duplicates
-        $candidates[$first_pub_id][] = [$pub_id, $cvtermname, $obj->value];
+        $candidates[$first_pub_id][] = [$pub_id, $cvtermname, $value];
       }
     }
   }  // foreach $cvtermnames
@@ -351,7 +356,7 @@ function carrotomics_admin_merge_publications() {
     return[1, $e->getMessage()];
   }
 
-  // load every publication and store by processed title + page
+  // load every publication and store by processed title
   $titlehash = [];
   while ($obj = $results->fetchObject()) {
     $pub_id = $obj->pub_id;
@@ -367,7 +372,7 @@ function carrotomics_admin_merge_publications() {
     $title = preg_replace($titlehashpattern, [], strtolower($obj->title));
     $page = preg_replace('/\-.*/', '', $obj->pages);
     if ($title) {
-      $key = $title . '.' . $page;
+      $key = $title;  // no longer include page here, some duplicates are missing page number
       $titlehash[$key][] = $pub_id;
     }
   }
@@ -394,7 +399,10 @@ function carrotomics_admin_merge_publications() {
       $dup_pub_id = $idandvalue[0];
       $dup_pub_cvterm = $idandvalue[1];
       $dup_pub_value = $idandvalue[2];
+      $entity = chado_get_record_entity_by_table('pub', $pub_id);
+      $dup_entity = chado_get_record_entity_by_table('pub', $dup_pub_id);
       $cols = [ $pub_id, $dup_pub_id, 'yes',
+                $entity, $dup_entity,
                 $dup_pub_cvterm, $dup_pub_value ];
       // additional informational columns
       $coltypes = ['year', 'volume', 'issue', 'firstpage', 'journal', 'title'];
@@ -431,8 +439,11 @@ function carrotomics_admin_merge_publications() {
         $cols[0] = $cols[1];
         $cols[1] = $tmp;
       }
-      $content .= implode("\t", $cols) . "\n";
-      $nfound++;
+      // Ignore if match key is URL and it is a generic URL
+      if (($dup_pub_cvterm != 'URL') or (carrotomics_admin_valid_url($dup_pub_value))) {
+        $content .= implode("\t", $cols) . "\n";
+        $nfound++;
+      }
     }
   }
 
@@ -447,6 +458,24 @@ function carrotomics_admin_merge_publications() {
   else {
     return [0, "There were no publications found that are candidates for merging"];
   }
+}
+
+/**
+ * Determine if the URL for a publication is a "general" journal URL rather than
+ * directly to the publication. Returns true if the URL is valid to consider
+ *
+ */
+function carrotomics_admin_valid_url($url) {
+  $result = 1;
+  // ignore if URL is just a site and no further path e.g. "http://www.jhortscib.com/"
+  if (preg_match('|https?://[^/]+/$|i', $url)) {
+    $result = 0;
+  }
+  // ignore if URL ends in "/contents" e.g. "http://www.kluweronline.com/issn/0032-079X/contents"
+  elseif (preg_match('|/contents$|i', $url)) {
+    $result = 0;
+  }
+  return $result;
 }
 
 /**
