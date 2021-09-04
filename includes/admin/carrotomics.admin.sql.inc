@@ -55,6 +55,20 @@ function carrotomics_admin_sql_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Find Unlinked Errata' button
+  $form['unlinked_pub_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'unlinked_pub_btn',
+    '#value'  => 'Find Unlinked Errata',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'Find publications that are erratum or correction publications'
+                 . ' that have not yet been linked to the original publication'
+                 . ' as a relationship ("tripal_pub" CV "part of" cvterm) and create'
+                 . ' a link between them in the chado.pub_relationship table'
+                 . '</em></div><br />',
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Update publication Unique Local Identifier' button
   $form['pub_uli_btn'] = [
     '#type'   => 'submit',
@@ -158,6 +172,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'merge_pub_btn') {
     [$nerrors, $status] = carrotomics_admin_merge_publications();
+  }
+  else if ($triggering_element == 'unlinked_pub_btn') {
+    [$nerrors, $status] = carrotomics_admin_unlinked_pub();
   }
   else if ($triggering_element == 'pub_uli_btn') {
     [$nerrors, $status] = carrotomics_admin_pub_uli();
@@ -476,6 +493,147 @@ function carrotomics_admin_valid_url($url) {
     $result = 0;
   }
   return $result;
+}
+
+/**
+ * Find errata and corrections that should be linked to the original publication
+ *
+ */
+function carrotomics_admin_unlinked_pub() {
+  $outputmessage = '';
+  $nadded = 0;
+  $nexisting = 0;
+  $nwarnings = 0;
+  $nerrors = 0;
+
+  // Determine the cvterm_id for tripal_pub::part of
+  // It is potentially possible to also use relationship::part_of, but so
+  // far CarrotOmics isn't using that term for this purpose
+  [$error, $part_of_id] = carrotomics_admin_lookup_cvterm_id('tripal_pub', 'part of');
+  if ($error ){ return[$error, $part_of_id]; }
+
+  // Patterns to be removed from the title to derive the original title  
+  // Correction: Blah blah carrot
+  // Publisher Correction: Blah blah roots
+  // Correction to "Blah blah orange"
+  // Erratum: Blah blah apiaceae
+  // Erratum to: Blah blah daucus
+  // Erratum.
+  // Blah blah consumption [Erratum: 2007 Nov., v. 46, issue 2, p. 199.]
+  $titlehashpattern = ['/^erratum to: */i', '/^erratum[:\.] */i',
+                       '/^correction to: */i', '/^correction[:\.] */i', '/^publisher correction[:\.] */i',
+                       '/^corrigendum[:\.] */i',
+                       '/ *\[erratum[^\]]+\] */i'];
+
+  // main query for candidate erratum publications
+  $sql1 = "SELECT pub_id, title FROM {pub}"
+        . " WHERE lower(title) LIKE '%erratum%'"
+        . " OR lower(title) LIKE '%correction%'"
+        . " OR lower(title) LIKE '%corrigendum%'";
+  $args1 = [];
+  $results1 = chado_query($sql1, $args1);
+
+  // Loop and investigate each retrieved publication
+  while ($obj1 = $results1->fetchObject()) {
+    $pub_id = $obj1->pub_id;
+    $title = $obj1->title;
+    $title_lc = strtolower($title);
+    $entity = chado_get_record_entity_by_table('pub', $pub_id);
+
+    // Before proceeding, see if a relationship already exists. This may have been
+    // done manually for some of the publications with errors or misspellings in
+    // the title or other anomalies, or was done in a previous call to this function
+    $sql2 = "SELECT pub_relationship_id, object_id FROM {pub_relationship}"
+          . " WHERE subject_id=:subject_id AND type_id=:type_id";
+    $args2 = [':subject_id' => $pub_id, ':type_id' => $part_of_id];
+    $results2 = chado_query($sql2, $args2);
+    $hits = [];
+    while ($obj2 = $results2->fetchObject()) {
+      $hits[] = $obj2->object_id;
+    }
+    if (sizeof($hits) > 0) {
+      $nexisting++;
+    }
+    else {
+      // Here we try to extract the original title
+      $origtitle = preg_replace($titlehashpattern, '', $title_lc);
+      // special handling for quoted titles e.g. https://carrotomics.org/bio_data/64646
+      $origtitle = preg_replace(['/^correction to "(.*?)"(\.?)$/'], '$1$2', $origtitle);
+      $origtitle = preg_replace(['/^corrigendum to "(.*?)"(\.?)$/'], '$1$2', $origtitle);
+
+      // If this processing did nothing, it might be due to the word "correction"
+      // elsewhere the title. These cases we return as warnings.
+      if ($title_lc == $origtitle) {
+        $nwarnings++;
+        $outputmessage .= "<li>Warning: Could not extract an original title from \""
+                       . l("$title", "bio_data/$entity")
+                       . "\" - It may not be an actual erratum or correction</li>";
+      }
+      else {
+        // try to retrieve the pub_id of the original publication, this is
+        // a case-insensitive query
+        $sql3 = "SELECT pub_id FROM {pub} WHERE lower(title) = :origtitle";
+        $args3 = [':origtitle' => $origtitle];
+        $results3 = chado_query($sql3, $args3);
+
+        // we want exactly one match. Zero means we couldn't find it, two
+        // or more if we have ambiguous matches
+        $orig_pub_id = [];
+        while ($obj3 = $results3->fetchObject()) {
+          $orig_pub_id[] = $obj3->pub_id;
+        }
+        $nmatches = sizeof($orig_pub_id);
+        if ($nmatches == 0) {
+          $nerrors++;
+          $outputmessage .= "<li>Error: No match to extracted original title from \""
+                       . l("$title", "bio_data/$entity")
+                       . "\" = \"$origtitle\""
+                       . " - Perhaps the original publication needs to be added first</li>";
+        }
+        elseif ($nmatches > 1) {
+          $nerrors++;
+          $outputmessage .= "<li>Error: $nmatches ambiguous matches to extracted original title \"$origtitle\" from \""
+                       . l("$title", "bio_data/$entity")
+                       . "\"</li>";
+        }
+        else {
+          // Here we now have one erratum pub and one original pub to link it to.
+          // We know that a relationship does not already exist, because of the
+          // query in sql2, so we can proceed to add the relationship now.
+          $values = [ 'subject_id' => $pub_id,
+                      'object_id' => $orig_pub_id[0],
+                      'type_id' => $part_of_id ];
+          try {
+            $parent_entity = chado_get_record_entity_by_table('pub', $orig_pub_id[0]);
+            $result = chado_insert_record('pub_relationship', $values);
+            if ($result) {
+              $nadded++;
+              $outputmessage .= "<li>Linked publication \""
+                              . l("$title", "bio_data/$entity")
+                              . "\" to be part of \""
+                              . l("$origtitle", "bio_data/$parent_entity")
+                              . "\"</li>";
+            }
+            else {
+              $nerrors++;
+              $outputmessage .= "<li>Failure linking \"$title\" to \"$origtitle\"</li>";
+            }
+          } catch (Exception $e) {
+            $nerrors++;
+            $outputmessage .= '<li>' . $e->getMessage() . " title=\"$title\"</li>";
+          }
+        }
+      }
+    }
+  }
+
+  if ($outputmessage) {
+    return [$nerrors, "$nexisting existing relationships present, $nadded relationships added,"
+                      ." $nerrors errors, $nwarnings warnings<ol>$outputmessage</ol>"];
+  }
+  else {
+    return [0, "No unlinked errata found"];
+  }
 }
 
 /**
