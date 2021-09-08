@@ -45,7 +45,8 @@ class main__stock_linker extends ChadoField {
    * Required for all TripalFields.
    */
   public static $default_instance_settings = [
-    // The DATABASE name, as it appears in chado.db.  This also builds the link-out url.  In most cases this will simply be the CV name.  In some cases (EDAM) this will be the SUBONTOLOGY.
+    // The DATABASE name, as it appears in chado.db. This also builds the link-out url.
+    // In most cases this will simply be the CV name. In some cases (EDAM) this will be the SUBONTOLOGY.
     'term_vocabulary' => 'MAIN',
     // The name of the term.
     'term_name' => 'stock',

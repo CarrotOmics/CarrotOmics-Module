@@ -88,19 +88,14 @@ class main__stock_linker_widget extends ChadoFieldWidget {
 
     $record_id = '';
 
-    $organism_id = 0;
-    // Duh where do we get organism id...
     $fk_value = (array_key_exists('#entity', $element) and $element['#entity']) ? $element['#entity']->chado_record_id : NULL;
 
     // If the field already has a value then it will come through the $items
     // array.  This happens when editing an existing record.
     $stock_id = '';
     if (count($items) > 0 and array_key_exists($delta, $items)) {
-      // i.e analysis_id
       $fk_value = tripal_get_field_item_keyval($items, $delta, 'chado-' . $field_table . '__' . $fkey_lcolumn, $fk_value);
       $record_id = tripal_get_field_item_keyval($items, $delta, 'chado-' . $field_table . '__' . $pkey, $record_id);
-      // i.e. organism_analysis_id
-      // organism_id.
       $stock_id = tripal_get_field_item_keyval($items, $delta, 'chado-' . $field_table . '__stock_id', $stock_id);
     }
 

@@ -22,7 +22,16 @@ function carrotomics_admin_page() {
 
   // Description.
   $items = [];
-  $items[] = "Add URLs to publications";
+  $items[] = "Generate publication URLs";
+  $items[] = "Find Duplicate Publications";
+  $items[] = "Find Unlinked Errata";
+  $items[] = "Update publication Unique Local Identifier";
+  $items[] = "Clean MD5 Checksums";
+  $items[] = "GBS Marker Locations";
+  $items[] = "Generate QTL Abbreviations";
+  $items[] = "Update stock_featuremap table";
+  $items[] = "Find Unpublished Content";
+  $items[] = "Validate public:// chado.fileloc entries";
   $description =  theme('item_list', ['items' => $items]);
 
   $content =<<<ADMIN_PAGE

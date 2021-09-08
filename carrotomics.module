@@ -10,6 +10,7 @@
 //require('includes/carrotomics.utils.inc');
 require_once('includes/carrotomics.fields.inc');
 require_once('includes/admin/carrotomics.admin.inc');
+require_once('includes/admin/carrotomics.admin.pub.inc');
 require_once('includes/admin/carrotomics.admin.sql.inc');
 require_once('includes/admin/carrotomics.admin.validate.inc');
 
@@ -119,8 +120,21 @@ function carrotomics_menu() {
     'weight' => $weight++,
   ];
 
+  // we need at least two items for these tabs to show up
+  $items['admin/carrotomics/pub'] = [
+    'title' => 'Publication Functions',  // note that tab titles display in all upper-case
+    'description' => 'Administrative functions for publications',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['carrotomics_admin_pub_form'],
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.pub.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => $weight++,
+  ];
+
   $items['admin/carrotomics/sql'] = [
-    'title' => 'SQL Functions',  // note that tab titles display in all upper-case
+    'title' => 'SQL Functions',
     'description' => 'Custom SQL Functions to modify chado',
     'page callback' => 'drupal_get_form',
     'page arguments' => ['carrotomics_admin_sql_form'],
@@ -131,7 +145,6 @@ function carrotomics_menu() {
     'weight' => $weight++,
   ];
 
-  // we need a second item for the tabs to show up
   $items['admin/carrotomics/validate'] = [
     'title' => 'Validation Functions',
     'description' => 'Functions to find troublesome data',
