@@ -235,9 +235,13 @@ function carrotomics_admin_merge_publications() {
               '(page_base)', '(page)',
               '(journal_base)', '(journal)',
               '(title_base)', '(title)'];
-  // characters to remove to make a title hash key
-  // sometimes one version of a title ends in a period, other times it doesn't
-  $titlehashpattern = ['/\.+/', '/\s+/'];
+  // Characters to remove to make a title hash key.
+  // Sometimes one version of a title ends in a period, other times it doesn't.
+  // Dashes and ndashes may be subsituted for each other.
+  // Remove any HTML tags.
+  // Quotes single or double can vary, remove them.
+  $titlehashpattern = ['/\.+/', '/\s+/', '/\-+/', '/‐+/', '/—+/', '/<[^>]+>/',
+                       '/‘/', '/’/', "/'/", '/“/', '/”/', '/"/'];
 
   // this will store key=>lower pub_id value=>[higher pub_id, info]
   $candidates = [];
