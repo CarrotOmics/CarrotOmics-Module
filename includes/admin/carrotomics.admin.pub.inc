@@ -35,22 +35,29 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Find Duplicate Publications' button
+  // Add a 'Find Duplicate Publications' button and optional minimum value for pub_id
   $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
   $merge_pub_url = file_create_url($merge_pub_filename);
-  $form['merge_pub_btn'] = [
-    '#type'   => 'submit',
-    '#name'   => 'merge_pub_btn',
-    '#value'  => 'Find Duplicate Publications',
-    '#prefix' => '<div style="padding-top:30px;"><em>'
+  $form['merge_pub_min_pub_id'] = [
+    '#type'     => 'textfield',
+    '#name'     => 'merge_pub_min_pub_id',
+    '#title'    => 'Optional minimum pub_id value',
+    '#required' => FALSE,
+    '#prefix'   => '<div style="padding-top:30px;"><em>'
                  . 'Loading publications from both Pubmed and National Ag Library can'
                  . ' result in duplicate instances of the same publication. This button will'
                  . ' generate a list of candidates that can be merged with the Mainlab Chado'
                  . ' Loader </em>merge_pub<em> template. Candidate duplications are found with a'
                  . ' combination of DOI and Title comparisons. The first column will'
                  . ' be the publication to be kept, the second column is the publication'
-                 . ' that will be deleted'
+                 . ' that will be deleted. Several additional columns are included for'
+                 . ' manual examination.'
                  . '</em></div><br />',
+  ];
+  $form['merge_pub_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'merge_pub_btn',
+    '#value'  => 'Find Duplicate Publications',
     '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
                  . "<hr>",
   ];
@@ -109,12 +116,15 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   // Gets the trigger element, i.e. which button was pressed
   $triggering_element = $form_state['triggering_element']['#name'];
 
+  // Gets optional values
+  $min_pub_id = $form_state['values']['merge_pub_min_pub_id'];
+
   // Take action depending on which button was pressed
   if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
   }
   else if ($triggering_element == 'merge_pub_btn') {
-    [$nerrors, $status] = carrotomics_admin_merge_publications();
+    [$nerrors, $status] = carrotomics_admin_merge_publications($min_pub_id);
   }
   else if ($triggering_element == 'unlinked_pub_btn') {
     [$nerrors, $status] = carrotomics_admin_unlinked_pub();
@@ -223,7 +233,7 @@ function carrotomics_admin_add_doi_url() {
  * Generate a file to merge duplicate publications
  *
  */
-function carrotomics_admin_merge_publications() {
+function carrotomics_admin_merge_publications($min_pub_id = NULL) {
   // The first three columns are for the Mainlab Chado Loader. The other columns are
   // information for the manual filtering process
   $headers = ['*pub_id_base', '*pub_id', 'delete',
@@ -391,10 +401,13 @@ function carrotomics_admin_merge_publications() {
         $cols[0] = $cols[1];
         $cols[1] = $tmp;
       }
-      // Ignore if match key is URL and it is a generic URL
-      if (($dup_pub_cvterm != 'URL') or (carrotomics_admin_valid_url($dup_pub_value))) {
-        $content .= implode("\t", $cols) . "\n";
-        $nfound++;
+      // filtering for optional minimum for pub_id
+      if ((!$min_pub_id) or ($pub_id >= $min_pub_id) or ($dup_pub_id >= $min_pub_id)) {
+        // Ignore if match key is URL and it is a generic URL
+        if (($dup_pub_cvterm != 'URL') or (carrotomics_admin_valid_url($dup_pub_value))) {
+          $content .= implode("\t", $cols) . "\n";
+          $nfound++;
+        }
       }
     }
   }
