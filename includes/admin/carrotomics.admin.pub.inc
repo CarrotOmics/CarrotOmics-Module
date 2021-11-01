@@ -35,6 +35,19 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Get maximum pub_id' button
+  $form['pub_max_pub_id_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'max_pub_id_btn',
+    '#value'  => 'Get maximum pub_id value',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "This button returns the highest value of pub_id in the chado.pub table."
+                 . " This can be used in conjunction with the Find Duplicate Publications"
+                 . " button below if the value is retrieved prior to loading additional publications."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Find Duplicate Publications' button and optional minimum value for pub_id
   $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
   $merge_pub_url = file_create_url($merge_pub_filename);
@@ -122,6 +135,9 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   // Take action depending on which button was pressed
   if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
+  }
+  else if ($triggering_element == 'max_pub_id_btn') {
+    [$nerrors, $status] = carrotomics_admin_max_pub_id();
   }
   else if ($triggering_element == 'merge_pub_btn') {
     [$nerrors, $status] = carrotomics_admin_merge_publications($min_pub_id);
@@ -227,6 +243,31 @@ function carrotomics_admin_add_doi_url() {
 
   $status = t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
+}
+
+/**
+ * Find errata and corrections that should be linked to the original publication
+ *
+ */
+function carrotomics_admin_max_pub_id() {
+  $outputmessage = '';
+
+  // Simple SQL to return the highest value of pub_id in the chado.pub table
+  $sql = "SELECT MAX(pub_id) AS max_pub_id FROM {pub}";
+  $args = [];
+  $results = chado_query($sql, $args);
+
+  // Loop and investigate each retrieved publication
+  while ($obj = $results->fetchObject()) {
+    $max_pub_id = $obj->max_pub_id;
+  }
+
+  if ($max_pub_id) {
+    return [0, "Maximum pub_id = $max_pub_id"];
+  }
+  else {
+    return [1, "Error from \"$sql\""];
+  }
 }
 
 /**
