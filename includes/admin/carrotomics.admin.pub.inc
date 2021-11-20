@@ -21,6 +21,20 @@ function carrotomics_admin_pub_form($form, &$form_state) {
   // Create the form
   $form = [];
 
+  // Add a 'Validate publications' button
+  $form['val_url_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'val_url_btn',
+    '#value'  => 'Validate publications',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'This button will detect problematic publication entries. Publication'
+                 . ' year must be blank, or be a four digit integer. Non-numeric content'
+                 . ' causes the chado publication search to fail if a year range is'
+                 . ' specified, e.g. "Fall 2011" or "06 Sep 2020".'
+                 . '</em></div><br />',
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Generate publication URLs' button
   $form['pub_url_btn'] = [
     '#type'   => 'submit',
@@ -30,7 +44,7 @@ function carrotomics_admin_pub_form($form, &$form_state) {
                  . 'This button will generate a URL for any publication lacking one,'
                  . ' if it has a DOI defined. The URL will be constructed by concatenating'
                  . ' "https://dx.doi.org/" with the DOI.<br />For example, for the DOI'
-                 . ' "10.1038/ng.3565" the URL becomes "https://dx.doi.org/10.1038/ng.3565"'
+                 . ' "10.1038/ng.3565" the URL becomes "https://dx.doi.org/10.1038/ng.3565".'
                  . '</em></div><br />',
     '#suffix' => "<hr>",
   ];
@@ -133,7 +147,10 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   $min_pub_id = $form_state['values']['merge_pub_min_pub_id'];
 
   // Take action depending on which button was pressed
-  if ($triggering_element == 'pub_url_btn') {
+  if ($triggering_element == 'val_url_btn') {
+    [$nerrors, $status] = carrotomics_admin_validate_pub();
+  }
+  else if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
   }
   else if ($triggering_element == 'max_pub_id_btn') {
@@ -176,6 +193,42 @@ function carrotomics_admin_lookup_pub_cvterm_id($cv_name, $cvterm_name) {
     return [1, t('Error retrieving cvterm_id for "@cvterm_name" from cv "@cv_name"',
                  ['@cvterm_name' => $cvterm_name, '@cv_name' => $cv_name])];
   }
+}
+
+/**
+ * 
+ * Validate content for publications
+ *
+ * More functions may be added. First validation is that the chado.pub pyear
+ * column is either blank, or is a four digit integer. A non-mumeric value here
+ * will cause publication search to fail if a year range is specified.
+ *
+ */
+function carrotomics_admin_validate_pub() {
+  $errors = '';
+  $nerrors = 0;
+
+  // check every publication for pyear validity
+  $sql = "SELECT pub_id, pyear FROM {pub}";
+  $args = [];
+  $pubresults = chado_query($sql, $args);
+  $invalidpubs = [];
+  while ($obj = $pubresults->fetchObject()) {
+    $pyear = $obj->pyear;
+    if ( ($pyear) and (!preg_match('/^\d\d\d\d$/', $pyear)) ) {
+      $invalidpubs[] = [$obj->pub_id, $pyear];
+    }
+  }
+
+  // if any errors, convert pub_id to associated entity for display as a link
+  foreach ($invalidpubs as $pubref) {
+    $entity = chado_get_record_entity_by_table('pub', $pubref[0]);
+    $errors .= "<li>Invalid year \"$pubref[1]\" for pub_id <a href=\"/bio_data/$entity\">$pubref[0]</a></li>";
+    $nerrors++;
+  }
+
+  $status = t('Found @nerrors errors', ['@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
 }
 
 /**
@@ -246,7 +299,7 @@ function carrotomics_admin_add_doi_url() {
 }
 
 /**
- * Find errata and corrections that should be linked to the original publication
+ * Retrieve the highest pub_id value from the chado.pub table
  *
  */
 function carrotomics_admin_max_pub_id() {
