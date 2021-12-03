@@ -49,6 +49,20 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Share series_name information' button
+  $form['pub_series_name_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'series_name_btn',
+    '#value'  => 'Share series_name information',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'This button will make sure that journal names from the'
+                 . ' chado.pub table in the series_name column are also present in the'
+                 . ' chado.pubprop table under cv term "Series Name", and vice versa.'
+                 . ' This allows publication search to function as expected.'
+                 . '</em></div><br />',
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Get maximum pub_id' button
   $form['pub_max_pub_id_btn'] = [
     '#type'   => 'submit',
@@ -153,6 +167,9 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   else if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
   }
+  else if ($triggering_element == 'series_name_btn') {
+    [$nerrors, $status] = carrotomics_admin_series_name();
+  }
   else if ($triggering_element == 'max_pub_id_btn') {
     [$nerrors, $status] = carrotomics_admin_max_pub_id();
   }
@@ -242,7 +259,7 @@ function carrotomics_admin_add_doi_url() {
 
   // get cvterm_id to use for URL as type_id in pubprop table
   [$error, $type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'URL');
-  if ($error ){ return[$error, $type_id]; }
+  if ( $error ){ return[$error, $type_id]; }
 
   // retrieve an array of all existing URL entries, key is pub_id
   $sql = "SELECT pub_id, value FROM {pubprop} WHERE type_id=$type_id";
@@ -295,6 +312,132 @@ function carrotomics_admin_add_doi_url() {
   }
 
   $status = t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Publication search checks the pubprop table and ignores the series_name
+ * column in the chado.pub table. Make sure the information is in both places
+ *
+ */
+function carrotomics_admin_series_name() {
+  $errors = '';
+
+  // get cvterm_id to use for "Series Name" and "Journal Name" as type_id in pubprop table
+  [$error, $series_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Series Name');
+  if ( $error ){ return[$error, $series_type_id]; }
+  [$error, $journal_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Journal Name');
+  if ( $error ){ return[$error, $journal_type_id]; }
+
+  // retrieve an array of all existing 'Series Name' and 'Journal Name' entries, key is pub_id
+  $sql = "SELECT pub_id, type_id, value FROM {pubprop} WHERE type_id IN ($series_type_id, $journal_type_id)";
+  $args = [];
+  $propresults = chado_query($sql, $args);
+  $props = [];
+  while ($obj = $propresults->fetchObject()) {
+    $props[$obj->pub_id][$obj->type_id] = $obj->value;
+  }
+
+  // retrieve an array of all existing pub entries, key is pub_id
+  $sql = "SELECT P.pub_id, P.series_name, B.entity_id FROM {pub} P LEFT JOIN chado_bio_data_6 B ON P.pub_id=B.record_id";
+  $args = [];
+  $pubresults = chado_query($sql, $args);
+  $pubs = [];
+  while ($obj = $pubresults->fetchObject()) {
+    $pubs[$obj->pub_id]['series_name'] = $obj->series_name;
+    $pubs[$obj->pub_id]['entity_id'] = $obj->entity_id;
+  }
+
+  // loop to add missing pubprop entries
+  $rank = 0;  // all added records will have this rank value. Since they are new, there is no possibility of conflict
+  $nokay = 0;
+  $nnull = 0;
+  $npropadded = 0;
+  $npubadded = 0;
+  $nerrors = 0;
+  foreach($pubs as $pub_id => $ref) {
+    $series_name = $ref['series_name'];
+    $entity_id = $ref['entity_id'];
+    // select different logic if pub.series_name is or isn't present
+    if ($series_name) {
+      // check if pubprop is present
+      if ( (array_key_exists($pub_id, $props))
+        and (array_key_exists($series_type_id, $props[$pub_id])) ) {
+        // present in both places, should be the same
+        if ( $series_name != $props[$pub_id][$series_type_id] ) {
+          // these cases will have to be fixed manually
+          $errors .= "<br>Discrepancy pub_id $pub_id entity $entity_id series_name=\"$series_name\" property=\"".$props[$pub_id][$series_type_id]."\"";
+          $nerrors++;
+        }
+        else {
+          $nokay++;
+        }
+      }
+      // pubprop not present, so should be added using value from pub.series_name
+      else {
+        $values = [ 'pub_id' => $pub_id,
+                    'type_id' => $series_type_id,
+                    'value' => $series_name,
+                    'rank' => $rank ];
+        try {
+          $result = chado_insert_record('pubprop', $values);
+          if ($result) {
+            $npropadded++;
+          }
+          else {
+            $nerrors++;
+          }
+        } catch (Exception $e) {
+          $nerrors++;
+          $errors .= '<br />' . $e->getMessage();
+        }
+      }
+    }
+    // else can we copy to pub.series_name from pubprop, either "Series Name" or "Journal Name"?
+    else {
+      if (array_key_exists($pub_id, $props)) {
+        $series_name = '';
+        if (array_key_exists($series_type_id, $props[$pub_id])) {
+          $series_name = $props[$pub_id][$series_type_id];
+        }
+        else if (array_key_exists($journal_type_id, $props[$pub_id])) {
+          $series_name = $props[$pub_id][$journal_type_id];
+        }
+        else {
+          $nnull++;
+        }
+        if ($series_name) {
+          $match = [ 'pub_id' => $pub_id ];
+          $values = [ 'series_name' => $series_name ];
+          try {
+            $result = chado_update_record('pub', $match, $values);
+            if ($result) {
+              $npubadded++;
+            }
+            else {
+              $nerrors++;
+            }
+          } catch (Exception $e) {
+            $nerrors++;
+            $errors .= '<br />' . $e->getMessage();
+          }
+        }
+      }
+      else {
+        $nnull++;
+      }
+    }
+  }
+  $status = t('@nokay publications were okay,'
+              . ' added @npropadded pubprop properties,'
+              . ' added @npubadded series_name to chado.pub,'
+              . ' @nnull publications have no series or journal,'
+              . ' @nerrors errors',
+    ['@nokay' => $nokay,
+     '@npropadded' => $npropadded,
+     '@npubadded' => $npubadded,
+     '@nnull' => $nnull,
+     '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
 }
 
