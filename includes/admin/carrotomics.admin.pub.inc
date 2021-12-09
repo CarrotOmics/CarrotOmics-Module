@@ -49,6 +49,18 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Generate publication URLs' button
+  $form['pub_abstract_url_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'pub_abstract_url_btn',
+    '#value'  => 'Make abstract URLs clickable',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . 'This button will ensure that any URLs in a publication abstract'
+                 . ' is a clickable link by enclosing it in an appropriate href tag'
+                 . '</em></div><br />',
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Share pub and pubprop information' button
   $form['pub_pub_pubprop_btn'] = [
     '#type'   => 'submit',
@@ -167,6 +179,9 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
+  }
+  else if ($triggering_element == 'pub_abstract_url_btn') {
+    [$nerrors, $status] = carrotomics_admin_abstract_url();
   }
   else if ($triggering_element == 'pub_pubprop_btn') {
     [$nerrors, $status] = carrotomics_admin_pub_pubprop();
@@ -313,6 +328,63 @@ function carrotomics_admin_add_doi_url() {
   }
 
   $status = t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * For every abstract that contains a URL, make sure it is
+ * wrapped in a href tag so that it is clickable
+ *
+ */
+function carrotomics_admin_abstract_url() {
+  $errors = '';
+  $nchanged = 0;
+  $nerrors = 0;
+
+  // get cvterm_id value for abstracts to use as type_id in the chado.pubprop table
+  [$error, $abstract_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Abstract');
+  if ( $error ){ return[$error, $abstract_type_id]; }
+
+  // loop through all retrieved abstracts, process as necessary
+  $sql = "SELECT P.pub_id, P.value FROM {pubprop} P"
+       . " WHERE P.type_id=$abstract_type_id AND LOWER(P.value) LIKE '%http%'";
+  $args = [];
+  $abstractresults = chado_query($sql, $args);
+  while ($obj = $abstractresults->fetchObject()) {
+    $pub_id = $obj->pub_id;
+    $abstracttext = $obj->value;
+    // here come the tricky bits. First make sure it is not alread a link, just look
+    // for href=, if that is present anywhere, then ignore this abstract
+    if ( ($abstracttext) and (!preg_match('/href=/i', $abstracttext)) ) {
+      // the tricky part is finding the end of the URL, and often they end in periods
+      // that are not part of it, but may (will!) contain periods internally
+      // tested: perl -pe 's/(https?:\/\/[^<\(\)\] \,\n\r]+[^\<\(\)\] \,\.\n\r])/<a href="$1">$1<\/a>/i'
+      $pattern = '/(https?:\/\/[^<\(\)\] \,\n\r]+[^\<\(\)\] \,\.\n\r])/i';
+      $replacement = '<a href="${1}">${1}</a>';
+      $newabstracttext = preg_replace($pattern, $replacement, $abstracttext);
+      if ( $newabstracttext != $abstracttext ) {
+        // abstract has been changed, save changes to chado
+        $match = [ 'pub_id' => $pub_id,
+                   'type_id' => $abstract_type_id ];
+        $values = [ 'value' => $newabstracttext ];
+        try {
+          $result = chado_update_record('pubprop', $match, $values);
+          if ($result) {
+            $nchanged++;
+          }
+          else {
+            $nerrors++;
+          }
+        } catch (Exception $e) {
+          $nerrors++;
+          $errors .= '<br />' . $e->getMessage();
+        }
+      }
+    }
+  }
+
+  $status = t('Updated @nchanged abstracts, @nerrors errors',
+              ['@nchanged' => $nchanged, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
 }
 
