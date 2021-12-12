@@ -33,6 +33,19 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Populate feature residues Length and Checksum' button
+  $form['residues_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'residues_btn',
+    '#value'  => 'Populate feature residues Length and Checksum',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "In the chado.feature table, any record with content in the"
+                 . " residues column will have the seqlen and md5checksum columns"
+                 . " populated with appropriate values if they are missing."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'GBS Marker Genome Locations' button
   $marker_loc_filename = 'public://mcl/user/'.$user->name.'/marker_loc.tsv';
   $marker_loc_url = file_create_url($marker_loc_filename);
@@ -110,6 +123,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   if ($triggering_element == 'clean_md5_btn') {
     [$nerrors, $status] = carrotomics_admin_remove_useless_checksums();
   }
+  else if ($triggering_element == 'residues_btn') {
+    [$nerrors, $status] = carrotomics_admin_residues_length_checksum();
+  }
   else if ($triggering_element == 'gbs_loc_btn') {
     [$nerrors, $status] = carrotomics_admin_gbs_location();
   }
@@ -152,7 +168,6 @@ function carrotomics_admin_lookup_cvterm_id($cv_name, $cvterm_name) {
 /**
  * Many features get an md5 checksum generated for a null string.
  * These are not useful. This function will remove them.
- *
  */
 function carrotomics_admin_remove_useless_checksums() {
   // equivalent SQL: UPDATE chado.feature SET md5checksum = NULL WHERE md5checksum = 'd41d8cd98f00b204e9800998ecf8427e';
@@ -177,6 +192,65 @@ function carrotomics_admin_remove_useless_checksums() {
   else {
     return [1, "$nchanged records to update, but something unexpected went wrong"];
   }
+}
+
+/**
+ * When a feature has a value in the residues column, the
+ * associated seqlen and md5checksum values should also be present.
+ * When this is not the case, this function fills in those values.
+ */
+function carrotomics_admin_residues_length_checksum() {
+  $errors = '';
+  $nerrors = 0;
+  $nupdated = 0;
+
+  // Retrieve a list of chado.feature records missing length or checksum.
+  // There are both empty strings and NULL values in both residues and md5checksum
+  $sql = "SELECT feature_id, residues FROM {feature}"
+       . " WHERE (residues = '') IS FALSE"  // i.e. not NULL and not empty string
+       . " AND ((seqlen = 0) IS NOT FALSE"  // i.e. either NULL or zero
+       . " OR (md5checksum = '') IS NOT FALSE)";  // i.e. either NULL or empty string
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+
+  // Validate the residue column before proceeding.
+  // Errors will have to be dealt with manually
+  while ($obj = $results->fetchObject()) {
+    $feature_id = $obj->feature_id;
+    $residues = $obj->residues;
+    if (preg_match('/([^ABCDEFGHIKLMNPQRSTVWXYZabcdefghiklmnpqrstvwxyz\*])/', $residues, $matches)) {
+      $errors .= '<br>Invalid residue "'.$matches[1].'" in feature '.$feature_id;
+      $nerrors++;
+    }
+    else {
+      $nupdated++;
+    }
+  }
+
+  // If no errors, proceed with the update
+  if ( (!$nerrors) and ($nupdated) ) {
+    $sql = "UPDATE {feature}"
+         . " SET seqlen=CHAR_LENGTH(residues), md5checksum=MD5(residues)"
+         . " WHERE (residues = '') IS FALSE"
+         . " AND ((seqlen = 0) IS NOT FALSE"
+         . " OR (md5checksum = '') IS NOT FALSE)";
+    $args = [];
+    try {
+      $results = chado_query($sql, $args);
+    } catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+  }
+  else {
+    $nupdated = 0;
+  }
+  $status = t('Updated @nupdated features, @nerrors errors',
+              ['@nupdated' => $nupdated, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
 }
 
 /**
