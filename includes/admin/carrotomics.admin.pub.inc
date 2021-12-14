@@ -43,8 +43,8 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#prefix' => '<div style="padding-top:30px;"><em>'
                  . 'This button will generate a URL for any publication lacking one,'
                  . ' if it has a DOI defined. The URL will be constructed by concatenating'
-                 . ' "https://dx.doi.org/" with the DOI.<br />For example, for the DOI'
-                 . ' "10.1038/ng.3565" the URL becomes "https://dx.doi.org/10.1038/ng.3565".'
+                 . ' "https://doi.org/" with the DOI.<br />For example, for the DOI'
+                 . ' "10.1038/ng.3565" the URL becomes "https://doi.org/10.1038/ng.3565".'
                  . '</em></div><br />',
     '#suffix' => "<hr>",
   ];
@@ -267,7 +267,7 @@ function carrotomics_admin_validate_pub() {
 /**
  * For every publication that does not currently have a URL, see if it has
  * a DOI, and if so, construct a URL based on the DOI with
- *   $url = 'https://dx.doi.org/' . $doi;
+ *   $url = 'https://doi.org/' . $doi;
  *
  */
 function carrotomics_admin_add_doi_url() {
@@ -305,7 +305,7 @@ function carrotomics_admin_add_doi_url() {
       // skip any unusual DOI entries, e.g. OCLC:ocm49858565
       if ( preg_match('/^10\./', $doi) ) {
         // here we generate a new URL and add it
-        $url = 'https://dx.doi.org/' . $doi;
+        $url = 'https://doi.org/' . $doi;
         // equivalent SQL: INSERT INTO {pubprop} (pub_id, type_id, value, rank) VALUES ($pub_id, $type_id, $url, $rank);
         $values = [ 'pub_id' => $pub_id,
                     'type_id' => $type_id,
