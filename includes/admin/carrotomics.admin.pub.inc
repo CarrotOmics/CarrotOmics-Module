@@ -591,19 +591,22 @@ function carrotomics_admin_merge_publications($min_pub_id = NULL) {
   $pub_info = [];  // cache of other information from each pub, key is pub_id
 
   // Duplicate detection part 1 = based on specific properties
-  // these cvterms will be used to find duplicates, based on just that single value
+  // these cvterms will be used to find duplicates, based on just that single value.
+  // Consider https:// and http:// to be equivalent
   $cvtermnames = ['DOI', 'Elocation', 'URL'];
   foreach ($cvtermnames as $cvtermname) {
-    $sql = "SELECT A.pub_id, A.value, A.rank,"
+    $sql = "SELECT A.pub_id, regexp_replace(lower(A.value), '^http:', 'https:') AS filtervalue, A.rank,"
          . " P.title, P.series_name, P.pyear, P.volume, P.issue, P.pages"
          . " FROM {pubprop} A"
-         . " JOIN (SELECT value, count(*) FROM {pubprop} PP"
+         . " JOIN (SELECT regexp_replace(lower(value), '^http:', 'https:') AS groupvalue,"
+         . "   count(*) FROM {pubprop} PP"
          . " WHERE PP.type_id="
          . "  (SELECT cvterm_id FROM {cvterm} CVT WHERE cv_id=(SELECT cv_id FROM {cv} CV"
          . "   WHERE CV.name=:cvname) AND CVT.name=:cvtermname)"
-         . " GROUP BY value HAVING COUNT(*) > 1) B ON A.value=B.value"
+         . " GROUP BY groupvalue HAVING COUNT(*) > 1) B"
+         . " ON regexp_replace(lower(A.value), '^http:', 'https:') = B.groupvalue"
          . " LEFT JOIN {pub} P ON A.pub_id=P.pub_id"
-         . " ORDER BY A.value, A.pub_id";
+         . " ORDER BY filtervalue, A.pub_id";
     $args = [':cvname' => 'tripal_pub', ':cvtermname' => $cvtermname];
 
     try {
@@ -620,11 +623,7 @@ function carrotomics_admin_merge_publications($min_pub_id = NULL) {
     $first_pub_id = '';
     while ($obj = $results->fetchObject()) {
       $pub_id = $obj->pub_id;
-      $value = $obj->value;
-      // consider http:// and https:// equivalent for our comparisons
-      if ($cvtermname == 'URL') {
-        $value = preg_replace('|^http://|i', 'https://', $value);
-      }
+      $value = $obj->filtervalue;
 
       if ($value != $prevvalue) {
         // first of a new set of duplicates, just save the pub_id
