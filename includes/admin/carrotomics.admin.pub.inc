@@ -35,6 +35,21 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Update publication Unique Local Identifier' button
+  $form['pub_uli_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'pub_uli_btn',
+    '#value'  => 'Update publication Unique Local Identifier',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "The \"uniquename\" column in the chado.pub table is named"
+                 . " \"Unique Local Identifier\" in the widget. These values are not displayed"
+                 . " to the end user. The publication loaders generate this to be the publication"
+                 . " citation, which is long, and it is not used on CarrotOmics."
+                 . " Replace these with the pub_id value."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Generate publication URLs' button
   $form['pub_url_btn'] = [
     '#type'   => 'submit',
@@ -49,7 +64,7 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Generate publication URLs' button
+  // Add a 'Make abstract URLs clickable' button
   $form['pub_abstract_url_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'pub_abstract_url_btn',
@@ -130,18 +145,15 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Update publication Unique Local Identifier' button
-  $form['pub_uli_btn'] = [
+  // Add a 'Remove Empty Publication Properties' button
+  $form['unlinked_pub_btn'] = [
     '#type'   => 'submit',
-    '#name'   => 'pub_uli_btn',
-    '#value'  => 'Update publication Unique Local Identifier',
+    '#name'   => 'empty_prop_btn',
+    '#value'  => 'Remove Empty Publication Properties',
     '#prefix' => '<div style="padding-top:30px;"><em>'
-                 . "The \"uniquename\" column in the chado.pub table is named"
-                 . " \"Unique Local Identifier\" in the widget. These values are not displayed"
-                 . " to the end user. The publication loaders generate this to be the publication"
-                 . " citation, which is long, and it is not used on CarrotOmics."
-                 . " Replace these with the pub_id value."
-                 . "</em></div><br />",
+                 . 'Remove records in the chado.pubprop table where the value'
+                 . ' is either NULL or is an empty string'
+                 . '</em></div><br />',
     '#suffix' => "<hr>",
   ];
 
@@ -177,6 +189,9 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   if ($triggering_element == 'val_url_btn') {
     [$nerrors, $status] = carrotomics_admin_validate_pub();
   }
+  else if ($triggering_element == 'pub_uli_btn') {
+    [$nerrors, $status] = carrotomics_admin_pub_uli();
+  }
   else if ($triggering_element == 'pub_url_btn') {
     [$nerrors, $status] = carrotomics_admin_add_doi_url();
   }
@@ -195,8 +210,8 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   else if ($triggering_element == 'unlinked_pub_btn') {
     [$nerrors, $status] = carrotomics_admin_unlinked_pub();
   }
-  else if ($triggering_element == 'pub_uli_btn') {
-    [$nerrors, $status] = carrotomics_admin_pub_uli();
+  else if ($triggering_element == 'empty_prop_btn') {
+    [$nerrors, $status] = carrotomics_admin_drop_empty_properties();
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -353,7 +368,7 @@ function carrotomics_admin_abstract_url() {
   while ($obj = $abstractresults->fetchObject()) {
     $pub_id = $obj->pub_id;
     $abstracttext = $obj->value;
-    // here come the tricky bits. First make sure it is not alread a link, just look
+    // here come the tricky bits. First make sure it is not already a link, just look
     // for href=, if that is present anywhere, then ignore this abstract
     if ( ($abstracttext) and (!preg_match('/href=/i', $abstracttext)) ) {
       // the tricky part is finding the end of the URL, and often they end in periods
@@ -953,6 +968,59 @@ function carrotomics_admin_pub_uli() {
 
   if ($nchanged or $nerrors) {
     $status = t('Changed @nchanged uniquename values, @nerrors errors', ['@nchanged' => $nchanged, '@nerrors' => $nerrors]);
+  }
+  else {
+    $status = t('No changes were needed');
+  }
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Remove records in the chado.pubprop table where the value
+ * is either NULL or is an empty string
+ *
+ */
+function carrotomics_admin_drop_empty_properties() {
+  $errors = '';
+  $nerrors = 0;
+  $ndropped = [];
+
+  // This entire function could all be done in one simple SQL
+  // statement, but I want statistics of what was dropped.
+  // First find the empty properties, then loop through each of them
+  $sql = "SELECT PP.pubprop_id, PP.type_id, PP.value, PP.rank, CV.name FROM {pubprop} PP"
+       . " LEFT JOIN {cvterm} CV ON PP.type_id=CV.cvterm_id"
+       . " WHERE (PP.value = '') IS NOT FALSE"  // i.e. empty string or NULL
+       . " OR PP.value = '|||'";  // Found in "Published Location"
+  $args = [];
+  $results = chado_query($sql, $args);
+
+  // Loop and make changes, keeping track of the number of changes
+  // made for each cv term
+  while ($obj = $results->fetchObject()) {
+    $pubprop_id = $obj->pubprop_id;
+    $cvtermname = $obj->name;
+    $where = [ 'pubprop_id' => $pubprop_id ];
+    try {
+      $success = chado_delete_record('pubprop', $where);
+      if ($success) { 
+        array_key_exists( $cvtermname, $ndropped ) ? $ndropped[$cvtermname]++ : $ndropped[$cvtermname] = 1;
+      }
+      else {
+        $nerrors++;
+      }
+    } catch (Exception $e) {
+      $nerrors++;
+      $errors = '<br>' . $e->getMessage();
+    }
+  }
+
+  if ($ndropped or $nerrors) {
+    $status = '';
+    foreach ($ndropped as $cvtermname => $count) {
+      $status .= "Dropped $count empty pubprop records for the term \"$cvtermname\"<br>";
+    }
+    $status .= "$nerrors Errors";
   }
   else {
     $status = t('No changes were needed');
