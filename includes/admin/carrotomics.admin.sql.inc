@@ -106,6 +106,19 @@ function carrotomics_admin_sql_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Assign organisms to phylonodes' button
+  $form['phylo_organism_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'phylo_organism_btn',
+    '#value'  => 'Assign organisms to phylonodes',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Phylogenetic tree taxonomic tree leaf nodes will be assigned to"
+                 . " organisms in the phylotree_organism table if such association"
+                 . " does not already exist"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   return $form;
 }
 
@@ -149,6 +162,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'stk_fmp_btn') {
     [$nerrors, $status] = carrotomics_admin_populate_stock_featuremap();
+  }
+  else if ($triggering_element == 'phylo_organism_btn') {
+    [$nerrors, $status] = carrotomics_admin_phylotree_organism();
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -358,7 +374,7 @@ function carrotomics_admin_gbs_location() {
 
 /**
  * Generate featureprop entries with MAIN::published_symbol cvterm
- * for all QTL lacking them, if they are of the format MK012345 anytext</div>
+ * for all QTL lacking them, if they are of the format MK012345 anytext
  *
  */
 function carrotomics_admin_qtl_abbrev() {
@@ -502,4 +518,138 @@ function carrotomics_admin_populate_stock_featuremap() {
   else {
     return [0, "There were no map to stock references found"];
   }
+}
+
+/**
+ * Generate links in the chado.phylotree_organism table based on
+ * leaf node names for taxonomic trees
+ *
+ */
+function carrotomics_admin_phylotree_organism() {
+  $errors = '';
+  $nerrors = 0;
+  $nadded = 0;
+  $nfailed = 0;
+
+  // get cvterm_id for "taxonomic" trees
+  [$error, $tree_type_id] = carrotomics_admin_lookup_cvterm_id('EDAM', 'Species tree');
+  if ($error ){ return[$error, $tree_type_id]; }
+
+  // get cvterm_id for leaf nodes
+  [$error, $leaf_type_id] = carrotomics_admin_lookup_cvterm_id('tripal_phylogeny', 'phylo_leaf');
+  if ($error ){ return[$error, $leaf_type_id]; }
+
+  // retrieve an array of all candidate leaf nodes without existing
+  // links in the phylonode_organism table, that are in "taxonomic" ("Species_tree") trees
+  $sql = "SELECT PN.phylonode_id, PN.label FROM {phylonode} PN"
+       . " LEFT JOIN {phylotree} PT ON PN.phylotree_id = PT.phylotree_id"
+       . " LEFT JOIN {phylonode_organism} PO ON PN.phylonode_id=PO.phylonode_id"
+       . " WHERE PT.type_id=:tree_id"
+       . " AND PN.type_id=:node_id"
+       . " AND PO.organism_id IS NULL";
+  $args = [':tree_id' => $tree_type_id, ':node_id' => $leaf_type_id];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  while ($obj = $results->fetchObject()) {
+    $phylonode_id = $obj->phylonode_id;
+    $label = $obj->label;
+    $organism_id = carrotomics_admin_lookup_organism_by_name($label);
+    if ($organism_id) {
+      try {
+        $values = ['phylonode_id' => $phylonode_id,
+                   'organism_id' => $organism_id];
+        $result = chado_insert_record('phylonode_organism', $values);
+        if ($result) {
+          $nadded++;
+        }
+        else {
+          $nerrors++;
+        }
+      } catch (Exception $e) {
+        $nerrors++;
+        $errors .= '<br />' . $e->getMessage();
+      }
+    }
+    else {
+      $nfailed++;
+      $errors .= '<br />Unable to look up ' . $label;
+    }
+  }
+
+  $status = t('Added @nadded organism links, @nfailed unable to determine organism, @nerrors errors',
+              ['@nadded' => $nadded, '@nfailed' => $nfailed, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Lookup an organism_id given an organism name (genus species)
+ *
+ * @param $name
+ *   The organism name.
+ *
+ * @return
+ *  organism_id from chado.organism table or FALSE on failure.
+ */
+function carrotomics_admin_lookup_organism_by_name($name) {
+  $organism_id = false;
+
+  // spaces in names are likely to be replaced with underscores in newick files
+  $name = trim(preg_replace('/_/', ' ', $name ));
+
+  // TreeBASE trees have a study prefix, remove that if present
+  $name = preg_replace('/^S\d+ /', '', $name);
+
+  // First try to find name as it is in the abbreviation column. This does not
+  // have a unique constraint, so we must verify that the count is 1
+  $sql = "SELECT COUNT(*) FROM {organism} WHERE abbreviation = :name";
+  $args = [':name' => $name];
+  $count = chado_query($sql, $args)->fetchField();
+  if ($count == 1) {
+    $sql = "SELECT organism_id FROM {organism} WHERE abbreviation = :name";
+    $organism_id = $chado_query($sql, $args)->fetchField();
+  }
+
+  // abbreviation query failed, so now query on genus + species and
+  // optionally infraspecific nomenclature
+  else {
+    $infrasupported = false;
+    $limit = 2;
+    if (chado_column_exists('organism', 'infraspecific_name')) {
+      $infrasupported = true;
+      $limit = 4;
+    }
+    $parts = preg_split('/\s+/', $name, $limit);
+    $sql = "SELECT organism_id FROM {organism} WHERE genus = :genus AND species = :species";
+    $args = [ ':genus' => $parts[0], ':species' => $parts[1] ];
+    if ($infrasupported) {
+      // when there is no infraspecific name, we can use the "no_rank" taxonomic term in
+      // the type_id column, or NULL can be considered equivalent. Wrap these in parentheses
+      $sql .= " AND ( type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = :infraspecific_type"
+           . " AND cv_id = (SELECT cv_id FROM {cv} WHERE name = 'taxonomic_rank'))";
+      if (!array_key_exists(2, $parts)) {
+        $parts[2] = 'no_rank';
+        $sql .= " OR type_id IS NULL";
+      }
+      else {
+        $parts[2] = chado_unabbreviate_infraspecific_rank($parts[2]);
+      }
+      $sql .= ")";
+      $parts[3] = array_key_exists(3, $parts) ? $parts[3] : false;
+      $args = array_merge( $args, [':infraspecific_type' => $parts[2]] );
+      // if no infraspecific name, specify empty string or null in the SQL
+      if ($parts[3]) {
+        $sql .= " AND infraspecific_name = :infraspecific_name";
+        $args = array_merge( $args, [':infraspecific_name' => $parts[3]] );
+      }
+      else {
+        $sql .= " AND ( infraspecific_name = '' ) IS NOT FALSE";  // must be either empty string or NULL
+      }
+    }
+    // unique constraint on organism table ensures we get zero or one record returned
+    $organism_id = chado_query($sql, $args)->fetchField();
+  }
+  return($organism_id);
 }
