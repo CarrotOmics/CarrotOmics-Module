@@ -30,6 +30,19 @@ function carrotomics_admin_validate_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Validate CarrotOmics accessions' button
+  $form['val_car_acc_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'val_car_acc_btn',
+    '#value'  => 'Validate CarrotOmics accessions',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "For stock items using the CarrotOmics database,"
+                 . " update the accession in dbxref to match the"
+                 . " cvterm and CarrotOmics entity e.g. accession/123456"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Validate public:// fileloc entries' button
   $form['val_fileloc_btn'] = [
     '#type'   => 'submit',
@@ -69,15 +82,17 @@ function carrotomics_admin_validate_form_submit($form, &$form_state) {
 
   if ($triggering_element == 'find_unpub_btn') {
     [$nerrors, $status] = carrotomics_admin_find_unpublished();
-    drupal_set_message($status, $nerrors?'error':'status');
   }
-  elseif ($triggering_element == 'val_fileloc_btn') {
+  else if ($triggering_element == 'val_car_acc_btn') {
+    [$nerrors, $status] = carrotomics_admin_validate_carrotomics_accessions();
+  }
+  else if ($triggering_element == 'val_fileloc_btn') {
     [$nerrors, $status] = carrotomics_admin_validate_fileloc();
-    drupal_set_message($status, $nerrors?'error':'status');
   }
   else {
-    drupal_set_message("Unknown button was pressed", 'error');
+    [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
   }
+  drupal_set_message($status, $nerrors?'error':'status');
 }
 
 /**
@@ -231,7 +246,82 @@ function carrotomics_admin_find_unpublished() {
 }
 
 /**
- * Find any tripal content types that need to be published.
+ * For germplasm accessions or other stocks using CarrotOmmics as the
+ * database, the convention is to have the accession reflect the
+ * CarrotOmics type id and entity number, e.g. accession/123456
+ * so that links are clickable
+ */
+function carrotomics_admin_validate_carrotomics_accessions() {
+
+  // Find candidate accession from the CarrotOmics DB
+  $sql1 = "SELECT S.stock_id, S.dbxref_id, DBX.accession, CV.name, CB.bundle_id"
+        . " FROM {stock} S"
+        . " LEFT JOIN {dbxref} DBX ON S.dbxref_id=DBX.dbxref_id"
+        . " LEFT JOIN {cvterm} CV ON S.type_id=CV.cvterm_id"
+        . " LEFT JOIN [chado_bundle] CB ON S.type_id=CB.type_id"
+        . " WHERE DBX.db_id=(SELECT db_id FROM {db} WHERE name='CarrotOmics')";
+  $args1 = [];
+  try {
+    $results1 = chado_query($sql1, $args1);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+
+  $ncorrect = 0;
+  $nchanged = 0;
+  $nunpublished = 0;
+  $nerrors = 0;
+
+  while ($obj = $results1->fetchObject()) {
+    $stock_id = $obj->stock_id;
+    $dbxref_id = $obj->dbxref_id;
+    $accession = $obj->accession;
+    // need to remove spaces i.e. "generated germplasm"
+    $cvname = preg_replace('/\s/', '', $obj->name);
+    $bundle_id = $obj->bundle_id;
+    if ( $bundle_id ) {
+      // Query the appropriate bundle to find the entity
+      $sql2 = "SELECT B.entity_id FROM [chado_bio_data_$bundle_id] B WHERE B.record_id=:record";
+      $args2 = [ ':record' => $stock_id ];
+      try {
+        $results2 = chado_query($sql2, $args2);
+      } catch (Exception $e) {
+        return [1, $e->getMessage()];
+      }
+      $entity_id = $results2->fetchField();
+
+      // entity is not present if not yet published
+      if ( $entity_id ) {
+        $expected = $cvname . '/' . $entity_id;
+        if ( $accession == $expected ) {
+          $ncorrect++;
+        }
+        else {
+          // incorrect, need to update
+          $sql3 = "UPDATE {dbxref} SET accession=:acc WHERE dbxref_id=:dbxref_id";
+          $args3 = [ ':acc' => $expected, ':dbxref_id' => $dbxref_id ];
+          try {
+            $results3 = chado_query($sql3, $args3);
+          } catch (Exception $e) {
+            return [1, $e->getMessage()];
+          }
+          $nchanged++;
+        }
+      }
+      else {
+        $nunpublished++;
+      }
+    }
+    else {
+      $nerrors++;  // not expected to occur
+    }
+  }
+
+  return [$nerrors, "$nchanged accessions updated, $ncorrect were correct, $nunpublished need to be published"];
+}
+
+/**
+ * Validate files used by the tripal file module
  *
  */
 function carrotomics_admin_validate_fileloc() {
