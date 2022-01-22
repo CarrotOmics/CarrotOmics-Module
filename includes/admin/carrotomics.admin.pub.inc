@@ -22,15 +22,17 @@ function carrotomics_admin_pub_form($form, &$form_state) {
   $form = [];
 
   // Add a 'Validate publications' button
-  $form['val_url_btn'] = [
+  $form['pub_val_btn'] = [
     '#type'   => 'submit',
-    '#name'   => 'val_url_btn',
+    '#name'   => 'pub_val_btn',
     '#value'  => 'Validate publications',
     '#prefix' => '<div style="padding-top:30px;"><em>'
                  . 'This button will detect problematic publication entries. Publication'
                  . ' year must be blank, or be a four digit integer. Non-numeric content'
                  . ' causes the chado publication search to fail if a year range is'
-                 . ' specified, e.g. "Fall 2011" or "06 Sep 2020".'
+                 . ' specified, e.g. "Fall 2011" or "06 Sep 2020". Publication citation'
+                 . ' must contain the full title exactly, otherwise entity links from'
+                 . ' the schema__publication field will not work.'
                  . '</em></div><br />',
     '#suffix' => "<hr>",
   ];
@@ -186,7 +188,7 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   $min_pub_id = $form_state['values']['merge_pub_min_pub_id'];
 
   // Take action depending on which button was pressed
-  if ($triggering_element == 'val_url_btn') {
+  if ($triggering_element == 'pub_val_btn') {
     [$nerrors, $status] = carrotomics_admin_validate_pub();
   }
   else if ($triggering_element == 'pub_uli_btn') {
@@ -255,23 +257,58 @@ function carrotomics_admin_lookup_pub_cvterm_id($cv_name, $cvterm_name) {
 function carrotomics_admin_validate_pub() {
   $errors = '';
   $nerrors = 0;
+  $invalidpubs = [];
 
   // check every publication for pyear validity
   $sql = "SELECT pub_id, pyear FROM {pub}";
   $args = [];
-  $pubresults = chado_query($sql, $args);
-  $invalidpubs = [];
-  while ($obj = $pubresults->fetchObject()) {
+  $pubyearresults = chado_query($sql, $args);
+  while ($obj = $pubyearresults->fetchObject()) {
+    $pub_id = $obj->pub_id;
     $pyear = $obj->pyear;
     if ( ($pyear) and (!preg_match('/^\d\d\d\d$/', $pyear)) ) {
-      $invalidpubs[] = [$obj->pub_id, $pyear];
+      $invalidpubs[] = [$pub_id, 'Invalid pub year', $pyear];
+    }
+  }
+
+  // check every publication for citation contains title exactly
+  $sql = "SELECT P.pub_id, P.title, PP.value FROM {pub} P"
+       . " LEFT JOIN {pubprop} PP ON P.pub_id=PP.pub_id"
+       . " WHERE PP.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='Citation'"
+       . " AND cv_id=(SELECT cv_id FROM {cv} WHERE name='tripal_pub'))";
+  $args = [];
+  $pubcitresults = chado_query($sql, $args);
+  while ($obj = $pubcitresults->fetchObject()) {
+    $pub_id = $obj->pub_id;
+    $title = $obj->title;
+    $citation = $obj->value;
+    if (!$title) {
+      $invalidpubs[] = [$pub_id, 'Publication has no title', $citation];
+    }
+    elseif (!$citation) {
+      $invalidpubs[] = [$pub_id, 'Publication has no citation', $title];
+    }
+    else {
+      $pos1 = strpos($citation, $title);
+      // some citations have html for italics but the title does not
+      $citation2 = preg_replace('/<\/?i>/i', '', $citation);
+      $pos2 = strpos($citation2, $title);
+      $citation3 = preg_replace('/<\/?em>/i', '', $citation);
+      $pos3 = strpos($citation3, $title);
+      if ( ($pos2 === false) and ($pos3 === false) ){
+        $invalidpubs[] = [$pub_id, 'Citation does not contain exact title', $citation];
+      }
+      elseif ($pos1 === false) {
+        // this happened most commonly for theses
+        $invalidpubs[] = [$pub_id, 'Citation contains italics, title does not', $citation];
+      }
     }
   }
 
   // if any errors, convert pub_id to associated entity for display as a link
   foreach ($invalidpubs as $pubref) {
     $entity = chado_get_record_entity_by_table('pub', $pubref[0]);
-    $errors .= "<li>Invalid year \"$pubref[1]\" for pub_id <a href=\"/bio_data/$entity\">$pubref[0]</a></li>";
+    $errors .= "<li>" . $pubref[1] . " \"$pubref[2]\" for pub_id <a href=\"/bio_data/$entity\">$pubref[0]</a></li>";
     $nerrors++;
   }
 
