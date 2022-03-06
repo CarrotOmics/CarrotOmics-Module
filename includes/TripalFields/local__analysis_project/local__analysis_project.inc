@@ -176,7 +176,9 @@ class local__analysis_project extends ChadoField {
           $name = $record->name;
           $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
           $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
-          $entity->{$field_name}['und'][$delta]['value']['entity'] = 'bio_data:' . $eid;
+          if ($eid) {
+            $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
+          }
           $delta++;
         }
       }
