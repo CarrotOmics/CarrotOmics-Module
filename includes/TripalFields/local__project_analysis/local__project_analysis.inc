@@ -119,67 +119,120 @@ class local__project_analysis extends ChadoField {
     $entity->{$field_name}['und'] = [];
     $project_id = $chado_record->project_id;
 
-    // find all analyses linked to this project
-    $sql = "SELECT PA.analysis_id FROM {project_analysis} PA"
-         . " WHERE project_id=:project_id";
+    // find all analyses and assays linked to this project
+    $analysis_ids = [];
+    $assay_ids = [];
+    $sql1 = "SELECT PA.analysis_id FROM {project_analysis} PA"
+          . " WHERE project_id=:project_id";
+    $sql2 = "SELECT AP.assay_id FROM {assay_project} AP"
+          . " WHERE project_id=:project_id";
     $args = [ ':project_id' => $project_id ];
-    $records = chado_query( $sql, $args );
-    if (!$records) {
+    $records1 = chado_query( $sql1, $args );
+    $records2 = chado_query( $sql2, $args );
+    if ( (!$records1) and (!$records2) ) {
       return;  // failure in query, should not happen?
     }
     // simplify results down to an array of just the analysis_id values
-    $analysis_ids = [];
-    while ( $record = $records->fetchObject() ) {
+    while ( $record = $records1->fetchObject() ) {
       $analysis_ids[] = $record->analysis_id;
     }
-    if (!$analysis_ids) {
-      return;  // no analyses found
+    while ( $record = $records2->fetchObject() ) {
+      $assay_ids[] = $record->assay_id;
+    }
+    if ( (!$analysis_ids) and (!$assay_ids) ) {
+      return;  // no analyses or assays found
     }
 
-    // we now have one or more analysis_id values. Look up entities for them.
-    // First get a list of possible bundles using the analysis table.
+    // we now have one or more analysis_id or assay_id values. Look up entities for them.
+    // I could use chado_get_record_entity_by_table(), but I also want the information
+    // from chado_bundle e.g. genome_assembly instead of just analysis.
+    // First get a list of possible bundles using the analysis or assay tables.
     $analysis_bundles = [];
-    $sql = "SELECT bundle_id, data_table, type_linker_table, type_column,"
-         . " (SELECT name FROM {cvterm} WHERE cvterm_id=type_id) AS type, type_value"
-         . " FROM [chado_bundle] WHERE data_table = 'analysis'";
-    $records = chado_query( $sql, [] );
-    if ($records) {
-      while ( $record = $records->fetchObject() ) {
+    $assay_bundles = [];
+    $sql3 = "SELECT bundle_id, data_table, type_linker_table, type_column,"
+          . " (SELECT name FROM {cvterm} WHERE cvterm_id=type_id) AS type, type_value"
+          . " FROM [chado_bundle] WHERE data_table = :table";
+    $records3 = chado_query( $sql3, [':table' => 'analysis'] );
+    $records4 = chado_query( $sql3, [':table' => 'assay'] );
+    if ($records3) {
+      while ( $record = $records3->fetchObject() ) {
         $analysis_bundles[] = [ $record->bundle_id, $record->data_table, $record->type, $record->type_value ];
+      }
+    }
+    if ($records4) {
+      while ( $record = $records4->fetchObject() ) {
+        $assay_bundles[] = [ $record->bundle_id, $record->data_table, $record->type, $record->type_value ];
       }
     }
 
     // Scan each of the bundle tables for analyses found above
+    // To-do: Bunch of duplication here, make a function
     $analysis_str = implode(',', $analysis_ids);
+    $assay_str = implode(',', $assay_ids);
     $delta = 0;
-    foreach ($analysis_bundles as $tableref) {
-      $bid = $tableref[0];
-      $table = $tableref[1];
-      // in some cases $type just contains 'type' in which case then use type_value e.g. genome_assembly
-      $type = $tableref[2];
-      if ((!$type) or ($type == 'type')) {
-        $type = $tableref[3];
-      }
-      // Format for nicer display e.g. "genome_assembly" becomes "Genome Assembly"
-      $type = ucwords(preg_replace('/_/', ' ', $type));
+    if ($analysis_str) {
+      foreach ($analysis_bundles as $tableref) {
+        $bid = $tableref[0];
+        $table = $tableref[1];
+        // in some cases $type just contains 'type' in which case then use type_value e.g. genome_assembly
+        $type = $tableref[2];
+        if ((!$type) or ($type == 'type')) {
+          $type = $tableref[3];
+        }
+        // Format for nicer display e.g. "genome_assembly" becomes "Genome Assembly"
+        $type = ucwords(preg_replace('/_/', ' ', $type));
 
-      $bundletable = "chado_bio_data_" . $bid;
-      // can't put analysis_str in $args because it will be quoted
-      $sql = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
-           . ' INNER JOIN {analysis} A on B.record_id = A.analysis_id'
-           . ' WHERE B.record_id IN ('.$analysis_str.')';
-      $args = [];
-      $records = chado_query($sql, $args);
-      if ($records) {
-        while ( $record = $records->fetchObject() ) {
-          $eid = $record->entity_id;
-          $name = $record->name;
-          $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
-          $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
-          if ($eid) {
-            $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
+        $bundletable = "chado_bio_data_" . $bid;
+        // can't put analysis_str in $args because it will be quoted
+        $sql = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
+             . ' INNER JOIN {analysis} A on B.record_id = A.analysis_id'
+             . ' WHERE B.record_id IN ('.$analysis_str.')';
+        $args = [];
+        $records = chado_query($sql, $args);
+        if ($records) {
+          while ( $record = $records->fetchObject() ) {
+            $eid = $record->entity_id;
+            $name = $record->name;
+            $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
+            $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
+            if ($eid) {
+              $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
+            }
+            $delta++;
           }
-          $delta++;
+        }
+      }
+    }
+    if ($assay_str) {
+      foreach ($assay_bundles as $tableref) {
+        $bid = $tableref[0];
+        $table = $tableref[1];
+        // in some cases $type just contains 'type' in which case then use type_value e.g. genome_assembly
+        $type = $tableref[2];
+        if ((!$type) or ($type == 'type')) {
+          $type = $tableref[3];
+        }
+        // Format for nicer display e.g. "genome_assembly" becomes "Genome Assembly"
+        $type = ucwords(preg_replace('/_/', ' ', $type));
+
+        $bundletable = "chado_bio_data_" . $bid;
+        // can't put assay_str in $args because it will be quoted
+        $sql = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
+             . ' INNER JOIN {assay} A on B.record_id = A.assay_id'
+             . ' WHERE B.record_id IN ('.$assay_str.')';
+        $args = [];
+        $records = chado_query($sql, $args);
+        if ($records) {
+          while ( $record = $records->fetchObject() ) {
+            $eid = $record->entity_id;
+            $name = $record->name;
+            $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
+            $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
+            if ($eid) {
+              $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
+            }
+            $delta++;
+          }
         }
       }
     }

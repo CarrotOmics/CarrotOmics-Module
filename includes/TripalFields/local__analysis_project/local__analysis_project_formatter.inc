@@ -26,14 +26,13 @@ class local__analysis_project_formatter extends ChadoFieldFormatter {
       // link to the entity
       $label = $item['value']['rdfs:label'];
       $name = $item['value']['schema:name'];
-      if (array_key_exists('entity', $item['value'])) {
-        list($e_type, $e_id) = explode(':', $item['value']['entity']);
-        $content = l($name, '/' . $e_type . '/' . $e_id, []);
-      }
-
-      if ($content) {
+      if ($name) {
+        if (array_key_exists('entity', $item['value'])) {
+          list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
+          $name = l(strip_tags($name), 'bio_data/'.$entity_id);
+        }
         $rows[] = [
-          $content,
+          $name,
           $label,
         ];
       }
