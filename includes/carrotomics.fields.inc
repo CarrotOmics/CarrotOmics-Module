@@ -121,6 +121,22 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     ];
   }
 
+  // for assay entity
+  if ($term_accession == 'OBI__0000070') {
+    $field_name = 'local__analysis_project';
+    $field_type = 'local__analysis_project';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
+  }
+
   // for organism entity
   if ($term_accession == 'OBI__0100026') {
     $field_name = 'edam__accession';
@@ -230,7 +246,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
     return $instances;
   }
 
-file_put_contents( "/dev/shm/map", "CP1 data table=\"".$bundle->data_table."\"\n", FILE_APPEND ); //@@@
   if ($bundle->data_table == 'stock') {
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
@@ -404,7 +419,10 @@ file_put_contents( "/dev/shm/map", "CP1 data table=\"".$bundle->data_table."\"\n
         ],
       ],
     ];
+  }
 
+  if ( ($bundle->data_table == 'analysis')
+    or ($bundle->data_table == 'assay') ) {
     $field_name = 'local__analysis_project';
     $field_type = 'local__analysis_project';
     $instances[$field_name] = [
@@ -416,9 +434,9 @@ file_put_contents( "/dev/shm/map", "CP1 data table=\"".$bundle->data_table."\"\n
       'required' => FALSE,
       'settings' => [
         'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,  // analysis
-        'chado_column' => $bundle->data_table . '_id', // analysis_id
-        'base_table' => $bundle->data_table,  // analysis
+        'chado_table' => $bundle->data_table,  // analysis||assay
+        'chado_column' => $bundle->data_table . '_id', // analysis_id||assay_id
+        'base_table' => $bundle->data_table,  // analysis||assay
         'term_name' => 'local:analysis_project',
         'term_accession' => 'analysis_project',
         'term_vocabulary' => 'local',  // database name, not CV name

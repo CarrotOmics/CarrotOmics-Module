@@ -15,7 +15,7 @@ class local__analysis_project extends ChadoField {
   public static $default_label = 'analysis_project';
 
   // The default description for this field.
-  public static $description = 'Related project or analysis';
+  public static $description = 'Related project';
 
   // Provide a list of instance specific settings. These can be access within
   // the instanceSettingsForm.  When the instanceSettingsForm is submitted
@@ -117,23 +117,34 @@ class local__analysis_project extends ChadoField {
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
     $entity->{$field_name}['und'] = [];
-    $analysis_id = $chado_record->analysis_id;
 
-    // find all projects linked to this analysis
-    $sql = "SELECT PA.project_id FROM {project_analysis} PA"
-         . " WHERE analysis_id=:analysis_id";
-    $args = [ ':analysis_id' => $analysis_id ];
+    // sql for analysis
+    if ($entity->chado_table == 'analysis') {
+      $record_id = $chado_record->analysis_id;
+      $sql = "SELECT PA.project_id FROM {project_analysis} PA"
+           . " WHERE analysis_id=:record_id";
+    }
+    elseif ($entity->chado_table == 'assay') {
+      $record_id = $chado_record->assay_id;
+      $sql = "SELECT AP.project_id FROM {assay_project} AP"
+           . " WHERE assay_id=:record_id";
+    }
+    else { // unsupported table
+      return;
+    }
+    $args = [ ':record_id' => $record_id ];
     $records = chado_query( $sql, $args );
     if (!$records) {
       return;  // failure in query, should not happen?
     }
-    // simplify results down to an array of just the analysis_id values
+
+    // simplify results down to an array of just the project_id values
     $project_ids = [];
     while ( $record = $records->fetchObject() ) {
       $project_ids[] = $record->project_id;
     }
     if (!$project_ids) {
-      return;  // no analyses found
+      return;  // no projects found
     }
 
     // we now have one or more project_id values. Look up entities for them.
