@@ -975,9 +975,10 @@ function carrotomics_admin_unlinked_pub() {
 function carrotomics_admin_pub_uli() {
   $errors = '';
 
-  // Find the publications needing to be updated
+  // Find the publications needing to be updated, but leave the special null pub alone
   $sql = "SELECT pub_id, uniquename FROM {pub} P"
-       . " WHERE NOT pub_id::text=uniquename";
+       . " WHERE NOT pub_id::text=uniquename"
+       . " AND NOT uniquename='null'";  
   $args = [];
   $results = chado_query($sql, $args);
 
