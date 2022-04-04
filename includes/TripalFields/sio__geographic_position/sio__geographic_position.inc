@@ -168,15 +168,15 @@ class sio__geographic_position extends ChadoField {
             // Get the terms for each of the keys for the 'values' properties.
             $label_term = 'rdfs:label';
             $description_term = chado_get_semweb_term('nd_geolocation', 'description'); // i.e. schema:description
-            $latitude_term = chado_get_semweb_term('nd_geolocation', 'latitude') ?? 'SIO:latitude';
-            $longitude_term = chado_get_semweb_term('nd_geolocation', 'longitude') ?? 'SIO:longitude';
-            $altitude_term = chado_get_semweb_term('nd_geolocation', 'altitude') ?? 'SIO:altitude';
-            $latitude_dev_term = chado_get_semweb_term('nd_geolocation', 'latitude_dev') ?? 'local:latitude_dev';
-            $longitude_dev_term = chado_get_semweb_term('nd_geolocation', 'longitude_dev') ?? 'local:longitude_dev';
-            $altitude_dev_term = chado_get_semweb_term('nd_geolocation', 'altitude_dev') ?? 'local:altitude_dev';
+            $latitude_term = chado_get_semweb_term('nd_geolocation', 'latitude');
+            $longitude_term = chado_get_semweb_term('nd_geolocation', 'longitude');
+            $altitude_term = chado_get_semweb_term('nd_geolocation', 'altitude');
+            $latitude_dev_term = chado_get_semweb_term('nd_geolocation', 'latitude_dev');
+            $longitude_dev_term = chado_get_semweb_term('nd_geolocation', 'longitude_dev');
+            $altitude_dev_term = chado_get_semweb_term('nd_geolocation', 'altitude_dev');
 
             $entity->{$field_name}['und'][0]['value'] = [
-              $label_term => 'test-label',
+              $label_term => 'Geographic Position',
               $description_term => $record->description,
               $latitude_term => $record->latitude,
               $longitude_term => $record->longitude,
