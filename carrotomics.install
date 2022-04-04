@@ -50,6 +50,8 @@ function carrotomics_requirements($phase) {
  * @ingroup carrotomics
  */
 function carrotomics_install() {
+  // Add custom tables
+  carrotomics_add_custom_tables();
   // Add columns to chado.nd_geolocation table
   carrotomics_update_nd_geolocation();
   // Add various required cv terms
@@ -65,9 +67,48 @@ function carrotomics_install() {
  * @ingroup carrotomics
  */
 function carrotomics_uninstall() {
+  db_drop_table('chado.stock_analysis');
   db_drop_field('chado.nd_geolocation', 'latitude_dev');
   db_drop_field('chado.nd_geolocation', 'longitude_dev');
   db_drop_field('chado.nd_geolocation', 'altitude_dev');
+}
+
+/**
+ * Add custom tables:
+ *   stock_analysis
+ */
+function carrotomics_add_custom_tables() {
+  // Add stock_analysis table
+  $schema = [
+    'fields' => [
+      'stock_analysis_id' => ['type' => 'serial', 'not null' => TRUE],
+      'stock_id' => ['type' => 'int', 'not null' => TRUE],
+      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
+    ],
+    'primary key' => ['stock_analysis_id'],
+    'foreign keys' => [
+      'stock' => [
+        'table' => 'stock',
+        'columns' => [
+          'stock_id' => 'stock_id',
+        ],
+      ],
+      'analysis' => [
+        'table' => 'analysis',
+        'columns' => [
+          'analysis_id' => 'analysis_id',
+        ],
+      ],
+    ],
+    'indexes' => [
+      'stock_analysis_idx1' => ['stock_id'],
+      'stock_analysis_idx2' => ['analysis_id'],
+    ],
+    'unique keys' => [
+      'stock_analysis_unique_uq1' => ['stock_id', 'analysis_id'],
+    ],
+  ];
+  chado_create_custom_table('stock_analysis', $schema, TRUE, NULL, FALSE);
 }
 
 /**
@@ -157,6 +198,13 @@ function carrotomics_add_cv_terms() {
     'name' => 'project_analysis',
     'cv_name' => 'local',
     'definition' => 'Used for a Tripal Field to link all analyses within a given project',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:stock_analysis',
+    'name' => 'stock_analysis',
+    'cv_name' => 'local',
+    'definition' => 'Used for a Tripal Field to link all stocks to analyses that use them',
   ]);
 
 }
