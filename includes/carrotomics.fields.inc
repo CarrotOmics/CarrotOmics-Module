@@ -70,6 +70,19 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
+
+    $field_name = 'local__stock_analysis';
+    $field_type = 'local__stock_analysis';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one stock can link to multiple analyses
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
   }
 
   // for biomaterial entity
@@ -311,9 +324,7 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
         ],
       ],
     ];
-  }
 
-  if ($bundle->data_table == 'stock') {
     $field_name = 'edam__genetic_map';
     $field_type = 'edam__genetic_map';
     $instances[$field_name] = [
@@ -343,6 +354,40 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
           'settings' => [
             'title' => 'Maps',
             'empty' => 'This stock is not present in any genetic or physical maps',
+          ],
+        ],
+      ],
+    ];
+
+    $field_name = 'local__stock_analysis';
+    $field_type = 'local__stock_analysis';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Analysis',
+      'description' => 'Related analyses',
+      'required' => FALSE,
+      'settings' => [
+        'auto_attach' => TRUE,
+        'chado_table' => 'stock_analysis',
+        'chado_column' => 'stock_id',
+        'base_table' => $bundle->data_table,
+        'term_name' => 'stock_analysis',
+        'term_accession' => 'stock_analysis',
+        'term_vocabulary' => 'local',  // database name, not CV name
+      ],
+      'widget' => [
+        'type' => 'local__stock_analysis_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'local__stock_analysis_formatter',
+          'settings' => [
+            'title' => 'Analysis',
+            'empty' => 'This stock is not used by any analysis',
           ],
         ],
       ],
