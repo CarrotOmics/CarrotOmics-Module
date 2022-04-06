@@ -87,6 +87,19 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Populate stock_analysis' button
+  $form['qtl_abbrev_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'stock_analysis_btn',
+    '#value'  => 'Generate stock_analysis links',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate links in the chado.stock_analysis custom table using"
+                 . " stocks created for phylogenetic trees. Links for both the"
+                 . " tree analysis and study analysis are made."
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Generate 'Update stock_featuremap Table' button
   $stock_featuremap_filename = 'public://mcl/user/'.$user->name.'/stock_featuremap.tsv';
   $stock_featuremap_url = file_create_url($stock_featuremap_filename);
@@ -159,6 +172,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'qtl_abbrev_btn') {
     [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
+  }
+  else if ($triggering_element == 'stock_analysis_btn') {
+    [$nerrors, $status] = carrotomics_admin_stock_analysis_linker();
   }
   else if ($triggering_element == 'stk_fmp_btn') {
     [$nerrors, $status] = carrotomics_admin_populate_stock_featuremap();
@@ -453,6 +469,100 @@ function carrotomics_admin_qtl_abbrev() {
 
   $status = t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
               ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Generate entries in the chado.stock_analysis custom table that
+ * are used by the local__stock_analysis field to link a stock to
+ * any analyses using that stock. Here entries are derived from
+ * phylogenetic trees.
+ *
+ */
+function carrotomics_admin_stock_analysis_linker() {
+  $nexisting = 0;
+  $nadded = 0;
+  $nduplicated = 0;  // Redundant, due to multiple trees per study
+  $nerrors = 0;
+  $errors = '';
+  $previously_added = [];  // More efficient to cache added values locally
+
+  // get cvterm_id for 'part_of' from the 'relationship' CV, which
+  // is used to link tree analyses to the parent study analysis
+  [$error, $part_of_id] = carrotomics_admin_lookup_cvterm_id('relationship', 'part_of');
+  if ($error ){ return[$error, $part_of_id]; }
+
+  // starting from phylotree nodes, retrieve linked features from which we can
+  // find linked stock entries. Existing links are returned so that we can count
+  // them to display in the summary output.
+  $sql = "SELECT FS.stock_id, T.analysis_id, R.object_id AS parent_analysis_id,"
+    . "   R.type_id, SA1.stock_analysis_id AS existing1, SA2.stock_analysis_id AS existing2"
+    . " FROM {phylonode} N"
+    . " LEFT JOIN {feature} F ON N.feature_id=F.feature_id"
+    . " LEFT JOIN {feature_stock} FS ON F.feature_id=FS.feature_id"
+    . " LEFT JOIN {phylotree} T ON N.phylotree_id=T.phylotree_id"
+    . " LEFT JOIN {analysis_relationship} R ON R.subject_id=T.analysis_id"
+    . " LEFT JOIN {stock_analysis} SA1 ON FS.stock_id=SA1.stock_id AND T.analysis_id=SA1.analysis_id"
+    . " LEFT JOIN {stock_analysis} SA2 ON FS.stock_id=SA2.stock_id AND R.object_id=SA2.analysis_id"
+    . " WHERE N.feature_id IS NOT NULL"
+    . " ORDER BY N.phylotree_id";
+  $args = [':part_of_id' => $part_of_id];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $links = [];
+  while ($obj = $results->fetchObject()) {
+    $stock_id = $obj->stock_id;
+    $analysis_id = $obj->analysis_id;
+    $parent_analysis_id = $obj->parent_analysis_id;
+
+    // child analysis
+    if ($analysis_id) {
+      if ($obj->existing1) {
+        $nexisting++;
+      }
+      elseif (array_key_exists($stock_id.':'.$analysis_id, $previously_added)) {
+        $nduplicated++;
+      }
+      else {
+        $values = ['stock_id' => $stock_id, 'analysis_id' => $analysis_id];
+        if (chado_insert_record('stock_analysis', $values, [])) {
+          $nadded++;
+          $previously_added[$stock_id.':'.$analysis_id] = 1;
+        }
+        else {
+          $nerrors++;
+        }
+      }
+    }
+
+    // parent analysis, relationship type must be correct
+    if (($parent_analysis_id) and ($obj->type_id) and ($obj->type_id == $part_of_id)) {
+      if ($obj->existing2) {
+        $nexisting++;
+      }
+      elseif (array_key_exists($stock_id.':'.$parent_analysis_id, $previously_added)) {
+        $nduplicated++;
+      }
+      else {
+        $values = ['stock_id' => $stock_id, 'analysis_id' => $parent_analysis_id];
+        if (chado_insert_record('stock_analysis', $values, [])) {
+          $nadded++;
+          $previously_added[$stock_id.':'.$parent_analysis_id] = 1;
+        }
+        else {
+          $nerrors++;
+        }
+      }
+    }
+  }
+
+  $status = t('Found @nexisting existing links, added @nadded links,'
+             . ' ignored @nduplicated redundant links, @nerrors errors',
+              ['@nexisting' => $nexisting, '@nadded' => $nadded,
+               '@nerrors' => $nerrors, '@nduplicated' => $nduplicated]);
   return [$nerrors, $status . $errors];
 }
 
