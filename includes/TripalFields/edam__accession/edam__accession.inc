@@ -143,7 +143,7 @@ class edam__accession extends ChadoField {
               // not all stocks have entities, only return those that do
               if ($brecord->entity_id) {
                 $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $stock_name;
-                $entity->{$field_name}['und'][$delta]['value']['entity'] = 'bio_data:' . $brecord->entity_id;
+                $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $brecord->entity_id;
                 $delta++;
               }
             }
