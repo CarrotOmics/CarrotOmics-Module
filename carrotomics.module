@@ -9,6 +9,7 @@
 //require('theme/carrotomics.theme.inc');
 //require('includes/carrotomics.utils.inc');
 require_once('includes/carrotomics.fields.inc');
+require_once('includes/carrotomics.brapi.inc');
 require_once('includes/admin/carrotomics.admin.inc');
 require_once('includes/admin/carrotomics.admin.pub.inc');
 require_once('includes/admin/carrotomics.admin.sql.inc');
