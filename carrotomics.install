@@ -208,29 +208,29 @@ function carrotomics_add_cv_terms() {
   ]);
 
   $term = chado_insert_cvterm([
-    'id' => 'local:marker_count',
-    'name' => 'marker_count',
+    'id' => 'local:Number_of_markers',
+    'name' => 'Number of markers',
     'cv_name' => 'local',
     'definition' => 'Total number of markers in a linkage map.',
   ]);
 
   $term = chado_insert_cvterm([
-    'id' => 'local:qtl_count',
-    'name' => 'qtl_count',
+    'id' => 'local:Number_of_quantitative_trait_loci',
+    'name' => 'Number of quantitative trait loci',
     'cv_name' => 'local',
     'definition' => 'Total number of quantitative trait loci in a linkage map.',
   ]);
 
   $term = chado_insert_cvterm([
-    'id' => 'local:mtl_count',
-    'name' => 'mtl_count',
+    'id' => 'local:Number_of_mendelian_trait_loci',
+    'name' => 'Number of mendelian trait loci',
     'cv_name' => 'local',
     'definition' => 'Total number of mendelian trait loci in a linkage map.',
   ]);
 
   $term = chado_insert_cvterm([
-    'id' => 'local:linkage_group_count',
-    'name' => 'linkage_group_count',
+    'id' => 'local:Number_of_linkage_groups',
+    'name' => 'Number of linkage groups',
     'cv_name' => 'local',
     'definition' => 'Total number of linkage groups in a linkage map.',
   ]);

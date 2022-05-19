@@ -657,13 +657,13 @@ function carrotomics_admin_generate_featuremapprop() {
   $errors = '';
 
   // get cvterm_id values for properties to be added
-  [$error, $marker_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'marker_count');
+  [$error, $marker_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of markers');
   if ($error ){ return[$error, $marker_count_id]; }
-  [$error, $qtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'qtl_count');
+  [$error, $qtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of quantitative trait loci');
   if ($error ){ return[$error, $qtl_count_id]; }
-  [$error, $mtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'mtl_count');
+  [$error, $mtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of mendelian trait loci');
   if ($error ){ return[$error, $mtl_count_id]; }
-  [$error, $linkage_group_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'linkage_group_count');
+  [$error, $linkage_group_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of linkage groups');
   if ($error ){ return[$error, $linkage_group_count_id]; }
 
   // Generate a list of featuremap_id values to process.

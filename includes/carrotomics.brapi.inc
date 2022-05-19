@@ -31,7 +31,15 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
       'name' => 'name',
       'mapDbId' => 'featuremap_id',
       'comments' => 'description',
-      'publishedDate' => [],  // We don't have this
+      'publishedDate' => [
+        'table' => 'featuremapprop',
+        'foreign_key' => 'featuremap_id',
+        'column' => 'value',
+        'selector' => [
+          'type_id' => 117,  // "tripal_pub:Publication Date" hardcoded for CarrotOmics
+        ],
+        'field_type' => 'string',
+      ],  // We don't have this
       'species' => function ($data_type, $map, $field_name, $op, $values = NULL) {
         $taxon = NULL;
         switch ($op) {
@@ -69,7 +77,7 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
         'foreign_key' => 'featuremap_id',
         'column' => 'value',
         'selector' => [
-          'type_id' => 64901,  // "local:marker_count" hardcoded for CarrotOmics
+          'type_id' => 64901,  // "local:Number of markers" hardcoded for CarrotOmics
         ],
         'field_type' => 'string',
       ],
@@ -78,7 +86,7 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
         'foreign_key' => 'featuremap_id',
         'column' => 'value',
         'selector' => [
-          'type_id' => 64904,  // "local:linkage_group_count" hardcoded for CarrotOmics
+          'type_id' => 64904,  // "local:Number of linkage groups" hardcoded for CarrotOmics
         ],
         'field_type' => 'string',
       ],
