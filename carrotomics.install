@@ -207,4 +207,32 @@ function carrotomics_add_cv_terms() {
     'definition' => 'Used for a Tripal Field to link all stocks to analyses that use them',
   ]);
 
+  $term = chado_insert_cvterm([
+    'id' => 'local:marker_count',
+    'name' => 'marker_count',
+    'cv_name' => 'local',
+    'definition' => 'Total number of markers in a linkage map.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:qtl_count',
+    'name' => 'qtl_count',
+    'cv_name' => 'local',
+    'definition' => 'Total number of quantitative trait loci in a linkage map.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:mtl_count',
+    'name' => 'mtl_count',
+    'cv_name' => 'local',
+    'definition' => 'Total number of mendelian trait loci in a linkage map.',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:linkage_group_count',
+    'name' => 'linkage_group_count',
+    'cv_name' => 'local',
+    'definition' => 'Total number of linkage groups in a linkage map.',
+  ]);
+
 }

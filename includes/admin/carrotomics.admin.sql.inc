@@ -100,7 +100,7 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Generate 'Update stock_featuremap Table' button
+  // Add a 'Update stock_featuremap Table' button
   $stock_featuremap_filename = 'public://mcl/user/'.$user->name.'/stock_featuremap.tsv';
   $stock_featuremap_url = file_create_url($stock_featuremap_filename);
   $form['stk_fmp_btn'] = [
@@ -117,6 +117,18 @@ function carrotomics_admin_sql_form($form, &$form_state) {
                  . "</em></div><br />",
     '#suffix' => "<div>Download the generated list from <a href=\"".$stock_featuremap_url."\">here</a></div><br />"
                  . "<hr>",
+  ];
+
+  // Add a 'Generate map properties' button
+  $form['map_prop_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'map_prop_btn',
+    '#value'  => 'Generate map properties',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate chado properties for maps. These are:"
+                 . " Number of markers,"
+                 . " Number of linkage groups."
+                 . "</em></div><br />",
   ];
 
   // Add a 'Assign organisms to phylonodes' button
@@ -178,6 +190,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'stk_fmp_btn') {
     [$nerrors, $status] = carrotomics_admin_populate_stock_featuremap();
+  }
+  else if ($triggering_element == 'map_prop_btn') {
+    [$nerrors, $status] = carrotomics_admin_generate_featuremapprop();
   }
   else if ($triggering_element == 'phylo_organism_btn') {
     [$nerrors, $status] = carrotomics_admin_phylotree_organism();
@@ -628,6 +643,117 @@ function carrotomics_admin_populate_stock_featuremap() {
   else {
     return [0, "There were no map to stock references found"];
   }
+}
+
+/**
+ * Generate properties for the chado.featuremapprop table.
+ *
+ */
+function carrotomics_admin_generate_featuremapprop() {
+  $nmaps = 0;
+  $nexisting = 0;
+  $nadded = 0;
+  $nerrors = 0;
+  $errors = '';
+
+  // get cvterm_id values for properties to be added
+  [$error, $marker_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'marker_count');
+  if ($error ){ return[$error, $marker_count_id]; }
+  [$error, $qtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'qtl_count');
+  if ($error ){ return[$error, $qtl_count_id]; }
+  [$error, $mtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'mtl_count');
+  if ($error ){ return[$error, $mtl_count_id]; }
+  [$error, $linkage_group_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'linkage_group_count');
+  if ($error ){ return[$error, $linkage_group_count_id]; }
+
+  // Generate a list of featuremap_id values to process.
+  $sql1 = "SELECT M.featuremap_id FROM {featuremap} M";
+  $args1 = [];
+  try {
+    $results1 = chado_query($sql1, $args1);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $featuremap_ids = [];
+  while ($obj = $results1->fetchObject()) {
+    $featuremap_ids[] = $obj->featuremap_id;
+    $nmaps++;
+  }
+
+  // Retrieve all existing properties.
+  $sql2 = "SELECT P.featuremap_id, P.type_id, P.value FROM {featuremapprop} P"
+        . " WHERE P.type_id IN (:t1, :t2, :t3, :t4)";
+  $args2 = [':t1' => $marker_count_id, ':t2' => $qtl_count_id,
+            ':t3' => $mtl_count_id, ':t4' => $linkage_group_count_id];
+  try {
+    $results2 = chado_query($sql2, $args2);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $properties = [];
+  while ($obj = $results2->fetchObject()) {
+    $properties[$obj->featuremap_id][$obj->type_id] = $obj->value;
+    $nexisting++;
+  }
+
+  // For each map, generate and store missing properties.
+  foreach ($featuremap_ids as $featuremap_id) {
+
+    // Number of linkage groups
+    if (!array_key_exists($featuremap_id, $properties) or !array_key_exists($linkage_group_count_id, $properties[$featuremap_id])) {
+      $sql3 = "SELECT COUNT(DISTINCT(F.uniquename)) AS linkage_group_count FROM {featurepos} FP"
+            . " LEFT JOIN {feature} F ON FP.map_feature_id=F.feature_id"
+            . " WHERE FP.featuremap_id=:featuremap_id";
+      $args3 = [':featuremap_id' => $featuremap_id];
+      $linkage_group_count = chado_query($sql3, $args3)->fetchField();
+      if ($linkage_group_count) {
+        $sql4 = "INSERT INTO {featuremapprop} (featuremap_id, type_id, value, rank)"
+              . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+        $args4 = [':featuremap_id' => $featuremap_id, ':type_id' => $linkage_group_count_id,
+                  ':value' => $linkage_group_count, ':rank' => 0];
+        try {
+          $results4 = chado_query($sql4, $args4);
+        } catch (Exception $e) {
+          return [1, $e->getMessage()];
+        }
+        $nadded++;
+      }
+      else {
+        $nerrors++;
+        $errors .= " Map $featuremap_id has no linkage groups";
+      }
+    }
+
+    // These three properties can share common SQL.
+    $props = ['marker_locus' => $marker_count_id,
+              'QTL' => $qtl_count_id,
+              'heritable_phenotypic_marker' => $mtl_count_id];
+    foreach ($props as $name => $type_id) {
+      if (!array_key_exists($featuremap_id, $properties) or !array_key_exists($type_id, $properties[$featuremap_id])) {
+        $sql5 = "SELECT COUNT(*) AS marker_count FROM {featurepos} FP"
+              . " LEFT JOIN {feature} F ON FP.feature_id=F.feature_id"
+              . " LEFT JOIN }cvterm} T ON F.type_id=T.cvterm_id"
+              . " WHERE T.name=:name AND FP.featuremap_id=:featuremap_id";
+        $args5 = [':name' => $name, ':featuremap_id' => $featuremap_id];
+        $count = chado_query($sql5, $args5)->fetchField();
+        // Here a count of zero is valid, e.g. no QTL on this map.
+        $sql6 = "INSERT INTO {featuremapprop} (featuremap_id, type_id, value, rank)"
+              . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+        $args6 = [':featuremap_id' => $featuremap_id, ':type_id' => $type_id,
+                  ':value' => $count, ':rank' => 0];
+        try {
+          $results6 = chado_query($sql6, $args6);
+        } catch (Exception $e) {
+          return [1, $e->getMessage()];
+        }
+        $nadded++;
+      }
+    }
+  }
+
+  $status = t('For @nmaps maps, @nexisting properties exist, added @nadded properties, @nerrors errors',
+              ['@nmaps' => $nmaps, '@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
 }
 
 /**
