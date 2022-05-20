@@ -23,7 +23,8 @@ function carrotomics_brapi_calls_alter(&$brapi_calls) {
  *
  */
 function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
-  $brapi_data_mapping["map"] = [
+  // map reconfiguration
+  $brapi_data_mapping['map'] = [
     'table' => 'featuremap',
     'identifier' => 'featuremap_id',
     'accession' => 'name',  // Not displayed, but required, and this becomes the sort key
@@ -92,6 +93,11 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
       ],
     ],
   ];
+
+  // germplasm reconfiguration
+  $brapi_data_mapping['germplasm']['fields']['germplasmName'] = 'name';
+  $brapi_data_mapping['germplasm']['fields']['accessionNumber'] = 'uniquename';
+
 }
 
 /**
