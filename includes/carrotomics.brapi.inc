@@ -23,6 +23,8 @@ function carrotomics_brapi_calls_alter(&$brapi_calls) {
  *
  */
 function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
+  $cv_settings = brapi_get_cv_settings();
+
   // map reconfiguration
   $brapi_data_mapping['map'] = [
     'table' => 'featuremap',
@@ -97,6 +99,244 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
   // germplasm reconfiguration
   $brapi_data_mapping['germplasm']['fields']['germplasmName'] = 'name';
   $brapi_data_mapping['germplasm']['fields']['accessionNumber'] = 'uniquename';
+
+  // sample reconfiguration. Originally only sampleDbID and sampleType worked.
+  $brapi_data_mapping['sample']['fields'] = [
+    // Table fields.
+    'sampleDbId' => 'stock_id',
+
+    // Aliases.
+    // Table joins.
+    'experimentId' => [
+      'table' => 'stock_analysis',
+      'column' => 'analysis_id',
+      'selector' => [],
+      'field_type' => 'string',
+    ],
+    'notes' => 'description',
+    'plantDbId' => [
+      'table' => 'stockprop',
+      'column' => 'value',
+      'selector' => [
+        'type_id' => $cv_settings['PlantDbId'],
+      ],
+      'field_type' => 'string',
+    ],
+    'sampleType' => [
+      'table' => 'cvterm',
+      'column' => 'name',
+      'object_key' => 'type_id',
+      'foreign_key' => 'cvterm_id',
+      'selector' => [],
+      'field_type' => 'string',
+    ],
+    'sourceStockId' => [
+      'table' => 'stock_relationship',
+      'column' => 'object_id',
+      'foreign_key' => 'subject_id',
+      'selector' => [
+        'type_id' => $cv_settings['SampleOf'],
+      ],
+      'field_type' => 'int',
+    ],
+    'tissueType' => [
+      'table' => 'stock_cvterm',
+      'column' => 'cvterm_id',
+      'selector' => [
+        'cvterm_id' => $cv_settings['TypeOfTissue'],
+        'is_not' => FALSE,
+      ],
+      'field_type' => 'cvterm',
+    ],
+    'germplasmDbId' => [
+      'table' => 'stock_relationship',
+      'object_key' => 'stock_id',
+      'foreign_key' => 'subject_id',
+      'column' => 'object_id',
+      'selector' => [
+        'type_id' => 51127, // "Main:sample_of" hardcoded for CarrotOmics
+      ],
+      'field_type' => 'int',
+    ],
+    // Function fields.
+    'observationUnitDbId' => function ($data_type, $stock, $field_name, $op, $values = NULL) {
+      $observation = NULL;
+      switch ($op) {
+        case NULL:
+          $observation = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $observation = NULL;
+
+        default:
+      }
+      return $observation;
+    },
+    'plateDbId' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $plate_db_id = NULL;
+      switch ($op) {
+        case NULL:
+          $plate_db_id = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          if ($experimentprop = chado_generate_var(
+            'nd_experimentprop',
+            [
+              'nd_experiment_id' => $experiment_id,
+              'type_id' => $cv_settings['PlateDbId'],
+            ]
+          )) {
+            $plate_db_id = $experimentprop->value;
+          }
+
+        default:
+      }
+      return $plate_db_id;
+    },
+    'plateIndex' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $plate_index = NULL;
+      switch ($op) {
+        case NULL:
+          $plate_index = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          if ($experimentprop = chado_generate_var(
+            'nd_experimentprop',
+            [
+              'nd_experiment_id' => $experiment_id,
+              'type_id' => $cv_settings['PlateIndex'],
+            ]
+          )) {
+            $plate_index = $experimentprop->value;
+          }
+
+        default:
+      }
+      return $plate_index;
+    },
+    'plotDbId' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $plot_db_id = NULL;
+      switch ($op) {
+        case NULL:
+          $plot_db_id = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          if ($experimentprop = chado_generate_var(
+            'nd_experimentprop',
+            [
+              'nd_experiment_id' => $experiment_id,
+              'type_id' => $cv_settings['PlotDbId'],
+            ]
+          )) {
+            $plot_db_id = $experimentprop->value;
+          }
+
+        default:
+      }
+      return $plot_db_id;
+    },
+    'sampleTimestamp' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $sample_timestamp = NULL;
+      switch ($op) {
+        case NULL:
+          $sample_timestamp = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          $experimentprop = chado_generate_var(
+            'nd_experimentprop',
+            [
+              'nd_experiment_id' => $experiment_id,
+              'type_id' => $cv_settings['SampleTimestamp'],
+            ]
+          );
+          if ($experimentprop && $experimentprop->value) {
+            $sample_timestamp = brapi_parse_date($experimentprop->value);
+          }
+
+        default:
+      }
+      return $sample_timestamp;
+    },
+    'studyDbId' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $study_db_id = NULL;
+      switch ($op) {
+        case NULL:
+          $study_db_id = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          if ($experimentprop = chado_generate_var(
+            'nd_experimentprop',
+            [
+              'nd_experiment_id' => $experiment_id,
+              'type_id' => $cv_settings['Study'],
+            ]
+          )) {
+            $study_db_id = $experimentprop->value;
+          }
+
+        default:
+      }
+      return $study_db_id;
+    },
+    'takenBy' => function ($data_type, $stock, $field_name, $op, $values = NULL) use ($cv_settings) {
+      $contact = NULL;
+      switch ($op) {
+        case NULL:
+          $contact = ['read' => TRUE];
+          break;
+
+        case 'read':
+          $experiment_id = brapi_get_field(
+            $data_type,
+            $stock,
+            'experimentId'
+          );
+          if ($experiment = chado_generate_var(
+            'nd_experiment',
+            [
+              'nd_experiment_id' => $experiment_id,
+            ]
+          )) {
+            $experiment = chado_expand_var($experiment, 'table', 'nd_experiment_contact');
+            $contact = $experiment->nd_experiment_contact->contact_id->name;
+          }
+
+        default:
+      }
+      return $contact;
+    },
+  ];
 
 }
 
