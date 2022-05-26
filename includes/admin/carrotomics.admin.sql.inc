@@ -203,30 +203,6 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   drupal_set_message($status, $nerrors?'error':'status');
 }
 
-
-/**
- * Looks up a cvterm_id from a cv and cvterm
- * Returns an array. First value is 1 if error, 0 if success.
- * Second value is error message if error, cvterm_id if success.
- *
- * @param $cv_name
- * @param $cvterm_name
- *
- */
-function carrotomics_admin_lookup_cvterm_id($cv_name, $cvterm_name) {
-  $sql = "SELECT cvterm_id FROM {cvterm} WHERE name = :cvterm_name AND cv_id=(SELECT cv_id FROM {cv} WHERE name = :cv_name)";
-  $args = [':cv_name' => $cv_name, ':cvterm_name' => $cvterm_name];
-  $typeresults = chado_query($sql, $args);
-  $obj = $typeresults->fetchObject();
-  if ($obj) {
-    return [0, $obj->cvterm_id];
-  }
-  else {
-    return [1, t('Error retrieving cvterm_id for "@cvterm_name" from cv "@cv_name"',
-                 ['@cvterm_name' => $cvterm_name, '@cv_name' => $cv_name])];
-  }
-}
-
 /**
  * Many features get an md5 checksum generated for a null string.
  * These are not useful. This function will remove them.
@@ -412,11 +388,11 @@ function carrotomics_admin_qtl_abbrev() {
   $errors = '';
 
   // get cvterm_id for QTL
-  [$error, $qtl_type_id] = carrotomics_admin_lookup_cvterm_id('sequence', 'QTL');
+  [$error, $qtl_type_id] = carrotomics_lookup_cvterm_id('sequence', 'QTL');
   if ($error ){ return[$error, $qtl_type_id]; }
 
   // get cvterm_id to use for featureprop table from MAIN::published_symbol
-  [$error, $symbol_type_id] = carrotomics_admin_lookup_cvterm_id('MAIN', 'published_symbol');
+  [$error, $symbol_type_id] = carrotomics_lookup_cvterm_id('MAIN', 'published_symbol');
   if ($error ){ return[$error, $symbol_type_id]; }
 
   // retrieve an array of all QTL lacking the published_symbol property
@@ -504,7 +480,7 @@ function carrotomics_admin_stock_analysis_linker() {
 
   // get cvterm_id for 'part_of' from the 'relationship' CV, which
   // is used to link tree analyses to the parent study analysis
-  [$error, $part_of_id] = carrotomics_admin_lookup_cvterm_id('relationship', 'part_of');
+  [$error, $part_of_id] = carrotomics_lookup_cvterm_id('relationship', 'part_of');
   if ($error ){ return[$error, $part_of_id]; }
 
   // starting from phylotree nodes, retrieve linked features from which we can
@@ -657,13 +633,13 @@ function carrotomics_admin_generate_featuremapprop() {
   $errors = '';
 
   // get cvterm_id values for properties to be added
-  [$error, $marker_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of markers');
+  [$error, $marker_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of markers');
   if ($error ){ return[$error, $marker_count_id]; }
-  [$error, $qtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of quantitative trait loci');
+  [$error, $qtl_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of quantitative trait loci');
   if ($error ){ return[$error, $qtl_count_id]; }
-  [$error, $mtl_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of mendelian trait loci');
+  [$error, $mtl_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of mendelian trait loci');
   if ($error ){ return[$error, $mtl_count_id]; }
-  [$error, $linkage_group_count_id] = carrotomics_admin_lookup_cvterm_id('local', 'Number of linkage groups');
+  [$error, $linkage_group_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of linkage groups');
   if ($error ){ return[$error, $linkage_group_count_id]; }
 
   // Generate a list of featuremap_id values to process.
@@ -768,11 +744,11 @@ function carrotomics_admin_phylotree_organism() {
   $nfailed = 0;
 
   // get cvterm_id for "taxonomic" trees
-  [$error, $tree_type_id] = carrotomics_admin_lookup_cvterm_id('EDAM', 'Species tree');
+  [$error, $tree_type_id] = carrotomics_lookup_cvterm_id('EDAM', 'Species tree');
   if ($error ){ return[$error, $tree_type_id]; }
 
   // get cvterm_id for leaf nodes
-  [$error, $leaf_type_id] = carrotomics_admin_lookup_cvterm_id('tripal_phylogeny', 'phylo_leaf');
+  [$error, $leaf_type_id] = carrotomics_lookup_cvterm_id('tripal_phylogeny', 'phylo_leaf');
   if ($error ){ return[$error, $leaf_type_id]; }
 
   // retrieve an array of all candidate leaf nodes without existing

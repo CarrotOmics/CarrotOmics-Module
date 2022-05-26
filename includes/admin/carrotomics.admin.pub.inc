@@ -221,30 +221,6 @@ function carrotomics_admin_pub_form_submit($form, &$form_state) {
   drupal_set_message($status, $nerrors?'error':'status');
 }
 
-
-/**
- * Looks up a cvterm_id from a cv and cvterm
- * Returns an array. First value is 1 if error, 0 if success.
- * Second value is error message if error, cvterm_id if success.
- *
- * @param $cv_name
- * @param $cvterm_name
- *
- */
-function carrotomics_admin_lookup_pub_cvterm_id($cv_name, $cvterm_name) {
-  $sql = "SELECT cvterm_id FROM {cvterm} WHERE name = :cvterm_name AND cv_id=(SELECT cv_id FROM {cv} WHERE name = :cv_name)";
-  $args = [':cv_name' => $cv_name, ':cvterm_name' => $cvterm_name];
-  $typeresults = chado_query($sql, $args);
-  $obj = $typeresults->fetchObject();
-  if ($obj) {
-    return [0, $obj->cvterm_id];
-  }
-  else {
-    return [1, t('Error retrieving cvterm_id for "@cvterm_name" from cv "@cv_name"',
-                 ['@cvterm_name' => $cvterm_name, '@cv_name' => $cv_name])];
-  }
-}
-
 /**
  * 
  * Validate content for publications
@@ -326,7 +302,7 @@ function carrotomics_admin_add_doi_url() {
   $errors = '';
 
   // get cvterm_id to use for URL as type_id in pubprop table
-  [$error, $type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'URL');
+  [$error, $type_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'URL');
   if ( $error ){ return[$error, $type_id]; }
 
   // retrieve an array of all existing URL entries, key is pub_id
@@ -394,7 +370,7 @@ function carrotomics_admin_abstract_url() {
   $nerrors = 0;
 
   // get cvterm_id value for abstracts to use as type_id in the chado.pubprop table
-  [$error, $abstract_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Abstract');
+  [$error, $abstract_type_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Abstract');
   if ( $error ){ return[$error, $abstract_type_id]; }
 
   // loop through all retrieved abstracts, process as necessary
@@ -449,11 +425,11 @@ function carrotomics_admin_abstract_url() {
 function carrotomics_admin_pub_pubprop() {
 
   // get cvterm_id values to use as type_id in the chado.pubprop table
-  [$error, $series_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Series Name');
+  [$error, $series_type_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Series Name');
   if ( $error ){ return[$error, $series_type_id]; }
-  [$error, $journal_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Journal Name');
+  [$error, $journal_type_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Journal Name');
   if ( $error ){ return[$error, $journal_type_id]; }
-  [$error, $publisher_type_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'Publisher');
+  [$error, $publisher_type_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Publisher');
   if ( $error ){ return[$error, $publisher_type_id]; }
 
   // retrieve an array of all existing properties of interest, key is pub_id
@@ -841,7 +817,7 @@ function carrotomics_admin_unlinked_pub() {
   // Determine the cvterm_id for tripal_pub::part of
   // It is potentially possible to also use relationship::part_of, but so
   // far CarrotOmics isn't using that term for this purpose
-  [$error, $part_of_id] = carrotomics_admin_lookup_pub_cvterm_id('tripal_pub', 'part of');
+  [$error, $part_of_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'part of');
   if ($error ){ return[$error, $part_of_id]; }
 
   // Patterns to be removed from the title to derive the original title  
