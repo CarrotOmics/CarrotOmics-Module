@@ -34,9 +34,7 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
   [$error, $nmarkers_id] = carrotomics_lookup_cvterm_id('local', 'Number of markers');
   [$error, $nlgroups_id] = carrotomics_lookup_cvterm_id('local', 'Number of linkage groups');
   [$error, $sampleof_id] = carrotomics_lookup_cvterm_id('MAIN', 'sample_of');
-  [$error, $sample_id] = carrotomics_lookup_cvterm_id('MAIN', 'sample');
   [$error, $legend_id] = carrotomics_lookup_cvterm_id('MAIN', 'legend');
-  [$error, $date_id] = carrotomics_lookup_cvterm_id('MAIN', 'date');
 
   // map full definition.
   $brapi_data_mapping['map'] = [
@@ -357,7 +355,7 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
 
 
 
-  // image full definition.
+  // image full definition v1.3
   $brapi_data_mapping['image'] = [
     'table' => 'eimage',
     'identifier' => 'eimage_id',
@@ -365,8 +363,10 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
     'fields' => [
       // Table fields.
       'imageDbId' => 'eimage_id',
-      'name' => 'image_uri',
-      'comments' => [
+      'imageName' => 'image_uri',
+      'observationUnitDbId' => [],
+      'observationDbId' => [],
+      'descriptiveOntologyTerm' => [
         'table' => 'eimageprop',
         'foreign_key' => 'eimage_id',
         'column' => 'value',
@@ -375,38 +375,25 @@ function carrotomics_brapi_data_mapping_alter(&$brapi_data_mapping) {
         ],
         'field_type' => 'string',
       ],
-      'publishedDate' => [
-        'table' => 'eimageprop',
-        'foreign_key' => 'eimage_id',
-        'column' => 'value',
-        'selector' => [
-          'type_id' => $date_id,  // "MAIN:date"
-        ],
-        'field_type' => 'string',
-      ],
-      // for species, link through stock_image, then organism_id is in the stock table
-      'species' => function ($data_type, $image, $field_name, $op, $values = NULL) {
-        $taxon = NULL;
+      'imageURL' => function ($data_type, $image, $field_name, $op, $values = NULL) {
+        $url = NULL;
         switch ($op) {
           case NULL:
-            $taxon = ['read' => TRUE];
+            $url = ['read' => TRUE];
             break;
 
           case 'read':
-            $sql = "SELECT S.organism_id FROM {eimage} I"
-                 . " LEFT JOIN {stock_image} SI ON I.eimage_id=SI.eimage_id"
-                 . " LEFT JOIN {stock} S ON SI.stock_id=S.stock_id"
+            $sql = "SELECT I.image_uri FROM {eimage} I"
                  . " WHERE I.eimage_id=:image_id";
             $args = [':image_id' => $image->eimage_id];
-            $organism_id = chado_query($sql, $args)->fetchField();
-            $taxon = chado_get_organism_scientific_name(chado_get_organism(['organism_id' => $organism_id], []));
+            $url = chado_query($sql, $args)->fetchField();
+            $url = 'https://carrotomics.org/sites/default/files/bulk_data/carrotomics/germplasm/image/' . $url;
             break;
 
           default:
         }
-        return $taxon;
+        return $url;
       },
-      'type' => 'eimage_type',
     ],
   ];
 
@@ -528,8 +515,8 @@ function carrotomics_brapi_get_images_details_13($image_id) {
   $image_data = [];
 
   $fields = [
-    'name', 'imageDbId', 'publishedDate', 'species',
-    'type', 'comments',
+    'imageName', 'imageDbId', 'imageURL', 'descriptiveOntologyTerm',
+    'observationUnitDbId', 'observationDbId',
   ];
 
   foreach ($fields as $field_name) {
