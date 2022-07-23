@@ -497,7 +497,7 @@ function carrotomics_admin_stock_analysis_linker() {
     . " LEFT JOIN {stock_analysis} SA2 ON FS.stock_id=SA2.stock_id AND R.object_id=SA2.analysis_id"
     . " WHERE N.feature_id IS NOT NULL"
     . " ORDER BY N.phylotree_id";
-  $args = [':part_of_id' => $part_of_id];
+  $args = [];
   try {
     $results = chado_query($sql, $args);
   } catch (Exception $e) {
