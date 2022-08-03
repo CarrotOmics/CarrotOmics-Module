@@ -29,9 +29,9 @@ class sio__geographic_position_formatter extends ChadoFieldFormatter {
     foreach ($items as $item) {
 
       $description = $item['value']['schema:description'] ?? '';
-      $latitude = $item['value']['SIO:latitude'] ?? 'unavailable';
-      $longitude = $item['value']['SIO:longitude'] ?? 'unavailable';
-      $altitude = $item['value']['SIO:altitude'] ?? 'unavailable';
+      $latitude = $item['value']['SIO:000319'] ?? 'unavailable';
+      $longitude = $item['value']['SIO:000318'] ?? 'unavailable';
+      $altitude = $item['value']['SIO:000438'] ?? 'unavailable';
       $latitude_dev = $item['value']['local:latitude_dev'] ?? '';
       $longitude_dev = $item['value']['local:longitude_dev'] ?? '';
       $altitude_dev = $item['value']['local:altitude_dev'] ?? '';
