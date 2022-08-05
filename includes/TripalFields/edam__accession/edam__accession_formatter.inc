@@ -26,8 +26,8 @@ class edam__accession_formatter extends ChadoFieldFormatter {
       // link to the accession entity
       $content = $item['value']['rdfs:label'];
       if (array_key_exists('entity', $item['value'])) {
-        list($e_type, $e_id) = explode(':', $item['value']['entity']);
-        $content = l(strip_tags($content), '/' . $e_type . '/' . $e_id, []);
+        list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
+        $content = l(strip_tags($content), 'bio_data/'.$entity_id, []);
       }
 
       if ($content) {

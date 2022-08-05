@@ -27,7 +27,7 @@ class edam__phylogenetic_tree_formatter extends ChadoFieldFormatter {
       $content = $item['value']['rdfs:label'];
       if (array_key_exists('entity', $item['value'])) {
         list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
-        $content = l(strip_tags($content), $entity_type . '/' . $entity_id);
+        $content = l(strip_tags($content), 'bio_data/'.$entity_id);
       }
 
       if ($content) {
