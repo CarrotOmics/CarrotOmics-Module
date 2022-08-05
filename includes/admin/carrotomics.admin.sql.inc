@@ -45,6 +45,18 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Populate organism abbreviations' button
+  $form['pop_org_abbrev_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'pop_org_abbrev_btn',
+    '#value'  => 'Populate organism abbreviations',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Populate any missing organism abbreviations using"
+                 . " the chado_get_organism_scientific_name() function"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Populate feature residues Length and Checksum' button
   $form['residues_btn'] = [
     '#type'   => 'submit',
@@ -88,7 +100,7 @@ function carrotomics_admin_sql_form($form, &$form_state) {
   ];
 
   // Add a 'Populate stock_analysis' button
-  $form['qtl_abbrev_btn'] = [
+  $form['stock_analysis_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'stock_analysis_btn',
     '#value'  => 'Generate stock_analysis links',
@@ -176,6 +188,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   else if ($triggering_element == 'clean_taxid_btn') {
     [$nerrors, $status] = carrotomics_admin_clean_taxid();
   }
+  else if ($triggering_element == 'pop_org_abbrev_btn') {
+    [$nerrors, $status] = carrotomics_admin_populate_abbreviations();
+  }
   else if ($triggering_element == 'residues_btn') {
     [$nerrors, $status] = carrotomics_admin_residues_length_checksum();
   }
@@ -255,6 +270,50 @@ function carrotomics_admin_clean_taxid() {
   }
   else {
     return [0, "There were no placeholder records to remove"];
+  }
+}
+
+/**
+ * Populate organism abbreviations using the
+ * chado_get_organism_scientific_name() function.
+ */
+function carrotomics_admin_populate_abbreviations() {
+  $nupdated = 0;
+  $nerrors = 0;
+
+  // First get the list of organisms with a NULL or blank abbreviation
+  $sql1 = "SELECT organism_id FROM {organism} WHERE (abbreviation <> '') IS NOT TRUE";
+  $args1 = [];
+  try {
+    $results1 = chado_query($sql1, $args1);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+
+  // Next update each missing abbreviation
+  while ($obj = $results1->fetchObject()) {
+    $organism_id = $obj->organism_id;
+    $sciname = chado_get_organism_scientific_name(chado_get_organism(['organism_id' => $organism_id], []));
+    if ($sciname) {
+      $sql2 = "UPDATE {organism} SET abbreviation=:abbreviation WHERE organism_id=:organism_id";
+      $args2 = [':abbreviation' => $sciname, ':organism_id' => $organism_id];
+      try {
+        $results2 = chado_query($sql2, $args2);
+      } catch (Exception $e) {
+        return [1, $e->getMessage()];
+      }
+      $nupdated++;
+    }
+    else {
+      $nerrors++;
+    }
+  }
+
+  if ($nupdated) {
+    return [$nerrors, "$nupdated organism abbreviations were populated, $nerrors errors"];
+  }
+  else {
+    return [$nerrors, "There were no missing organism abbreviations, $nerrors errors"];
   }
 }
 
