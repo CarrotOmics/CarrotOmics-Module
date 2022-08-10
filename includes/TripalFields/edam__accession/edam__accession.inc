@@ -111,13 +111,15 @@ class edam__accession extends ChadoField {
     $chado_record = $entity->chado_record;
     $entity->{$field_name}['und'] = [];
 
-    // look up id values of stock bundles
+    // look up id values of all of the stock bundles
     $acbundles = [];
-    $sql = "SELECT bundle_id FROM [chado_bundle] WHERE data_table = 'stock'";
+    $sql = "SELECT CB.bundle_id, TB.label FROM [chado_bundle] CB"
+         . " LEFT JOIN [tripal_bundle] TB ON TB.name = CONCAT('bio_data_', CB.bundle_id)"
+         . " WHERE CB.data_table = 'stock'";
     $records = chado_query( $sql, [] );
     if ( $records ) {
       while ( $record = $records->fetchObject() ) {
-        $acbundles[] = $record->bundle_id;
+        $acbundles[$record->bundle_id] = $record->label;
       }
     }
 
@@ -133,16 +135,17 @@ class edam__accession extends ChadoField {
         $stock_name = $record->uniquename;
 
         // get entity id values.
-        foreach ($acbundles as $acbundle) {
+        foreach ($acbundles as $acbundle => $entity_name) {
           $bsql = "SELECT entity_id FROM [chado_bio_data_" . $acbundle . "] WHERE record_id = :stock_id";
           $bargs = [ ":stock_id" => $record->stock_id ];
           $brecords = chado_query( $bsql, $bargs );
 
           if ( $brecords ) {
             while ( $brecord = $brecords->fetchObject() ) {
-              // not all stocks have entities, only return those that do
+              // not all stock types may have entities, only return those that do
               if ($brecord->entity_id) {
                 $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $stock_name;
+                $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $entity_name;
                 $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $brecord->entity_id;
                 $delta++;
               }

@@ -16,8 +16,7 @@ class edam__accession_formatter extends ChadoFieldFormatter {
 //@@@todo: settings appears to be empty here
     $settings = $display['settings'];
     $rows = [];
-    //$headers = [($settings['title'] ?? 'Accession')];
-    $headers = [];  // no headers because only using one column
+    $headers = ['Accession', 'Accession Type'];
 
     foreach ($items as $delta => $item) {
       if (empty($item['value'])) {
@@ -25,6 +24,10 @@ class edam__accession_formatter extends ChadoFieldFormatter {
       }
       // link to the accession entity
       $content = $item['value']['rdfs:label'];
+      $entity_name = '';
+      if (array_key_exists('schema:name', $item['value'])) {
+        $entity_name = $item['value']['schema:name'];
+      }
       if (array_key_exists('entity', $item['value'])) {
         list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
         $content = l(strip_tags($content), 'bio_data/'.$entity_id, []);
@@ -33,6 +36,7 @@ class edam__accession_formatter extends ChadoFieldFormatter {
       if ($content) {
         $rows[] = [
           $content,
+          $entity_name,
         ];
       }
     }
