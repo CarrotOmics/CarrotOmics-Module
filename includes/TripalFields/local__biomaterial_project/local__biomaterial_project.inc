@@ -132,50 +132,66 @@ class local__biomaterial_project extends ChadoField {
     while ( $record = $records->fetchObject() ) {
       $project_ids[] = $record->project_id;
     }
-    if (!$project_ids) {
-      return;  // no projects found
+    $analysis_ids = [];
+    if ($project_ids) {
+
+      // we now have one or more project_id values. Extend another level to find
+      // any linked analyses. There is no chado.analysis_biomaterial table so we
+      // need to link through project to find them
+      $project_str = implode(',', $project_ids);
+      // can't put project_str in $args because it will be quoted
+      $sql = 'SELECT PA.analysis_id FROM {project_analysis} PA'
+           . ' WHERE project_id IN ('.$project_str.')';
+      $args = [];
+      $records = chado_query( $sql, $args );
+      if (!$records) {
+        return;  // failure in query, should not happen?
+      }
+      // simplify results down to an array of just the biomaterial_id values
+      while ( $record = $records->fetchObject() ) {
+        $analysis_ids[] = $record->analysis_id;
+      }
     }
 
-    // we now have one or more project_id values. Extend another level to find
-    // any linked analyses. There is no chado.analysis_biomaterial table so we
-    // need to link through project to find them
-    $project_str = implode(',', $project_ids);
-    // can't put project_str in $args because it will be quoted
-    $sql = 'SELECT PA.analysis_id FROM {project_analysis} PA'
-         . ' WHERE project_id IN ('.$project_str.')';
-    $args = [];
+    // find all assays linked to this biomaterial
+    $sql = "SELECT AB.assay_id FROM {assay_biomaterial} AB"
+         . " WHERE biomaterial_id=:biomaterial_id";
+    $args = [ ':biomaterial_id' => $biomaterial_id ];
     $records = chado_query( $sql, $args );
     if (!$records) {
       return;  // failure in query, should not happen?
     }
-    // simplify results down to an array of just the biomaterial_id values
-    $analysis_ids = [];
+    // simplify results down to an array of just the assay_id values
+    $assay_ids = [];
     while ( $record = $records->fetchObject() ) {
-      $analysis_ids[] = $record->analysis_id;
+      $assay_ids[] = $record->assay_id;
     }
 
-    // Look up entities for 
-    // First get a list of possible bundles using the project table.
-    $pa_bundles = [];
+    // Look up entities for each project, analysis, or assay.
+    // First get a list of possible bundles.
+    $paa_bundles = [];
     $sql = "SELECT bundle_id, data_table, type_linker_table, type_column,"
          . " (SELECT name FROM {cvterm} WHERE cvterm_id=type_id) AS type, type_value"
-         . " FROM [chado_bundle] WHERE data_table IN ('project', 'analysis')";
+         . " FROM [chado_bundle] WHERE data_table IN ('project', 'analysis', 'assay')";
     $args = [];
     $records = chado_query( $sql, $args );
     if ($records) {
       while ( $record = $records->fetchObject() ) {
-        $pa_bundles[] = [ $record->bundle_id, $record->data_table, $record->type, $record->type_value ];
+        $paa_bundles[] = [ $record->bundle_id, $record->data_table, $record->type, $record->type_value ];
       }
     }
 
-    // Scan each of the bundle tables for projects or analyses found above
+    // Scan each of the bundle tables for projects, analyses, or assays found above
     if ($analysis_ids) {
       $analysis_str = implode(',', $analysis_ids);
     }
+    if ($assay_ids) {
+      $assay_str = implode(',', $assay_ids);
+    }
     $delta = 0;
-    foreach ($pa_bundles as $tableref) {
+    foreach ($paa_bundles as $tableref) {
       $bid = $tableref[0];
-      $table = $tableref[1];  // 'project' or 'analysis'
+      $table = $tableref[1];  // 'project' or 'analysis' or 'assay'
       // in some cases $type just contains 'type' in which case then use type_value e.g. genome_assembly
       $type = $tableref[2];
       if ((!$type) or ($type == 'type')) {
@@ -185,19 +201,23 @@ class local__biomaterial_project extends ChadoField {
       $type = ucwords(preg_replace('/_/', ' ', $type));
 
       $bundletable = "chado_bio_data_" . $bid;
-      // customize sql depending on whether this is project or analysis
-      // can't put project_str or analysis_str in $args because it will be quoted
-      if ($table == 'project') {
+      // customize sql depending on whether this is project, analysis, or assay
+      // can't put project_str or analysis_str or assay_str in $args because it will be quoted
+      $args = [];
+      if (($table == 'project') and ($project_ids)) {
         $sql = 'SELECT B.entity_id, P.name FROM ['.$bundletable.'] B'
              . ' INNER JOIN {project} P on B.record_id = P.project_id'
              . ' WHERE B.record_id IN ('.$project_str.')';
-        $args = [];
       }        
-      else if ($analysis_ids) {
+      else if (($table == 'analysis') and ($analysis_ids)) {
         $sql = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
              . ' INNER JOIN {analysis} A on B.record_id = A.analysis_id'
              . ' WHERE B.record_id IN ('.$analysis_str.')';
-        $args = [];
+      }
+      else if (($table == 'assay') and ($assay_ids)) {
+        $sql = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
+             . ' INNER JOIN {assay} A on B.record_id = A.assay_id'
+             . ' WHERE B.record_id IN ('.$assay_str.')';
       }
       else {
         $sql = '';
