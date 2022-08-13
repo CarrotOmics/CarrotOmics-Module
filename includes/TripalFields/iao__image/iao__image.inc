@@ -110,7 +110,7 @@ class iao__image extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    $entity->{$field_name}['und'][0]['value'] = [];
 
     // Using the nd_experiment_stock table, find all nd_geolocation records
     // linked to this record

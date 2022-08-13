@@ -129,9 +129,7 @@ class sio__geographic_position extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'][0] = [
-      'value' => '',
-    ];
+    $entity->{$field_name}['und'][0]['value'] = [];
 
     // Find all nd_geolocation records linked to this record
     // Lookups Implemented: nd_experiment_analysis  nd_experiment_contact
@@ -160,6 +158,7 @@ class sio__geographic_position extends ChadoField {
     if ($sql) {
       $idrecords = chado_query($sql, $args);
       if ( $idrecords ) {
+        $delta = 0;
         while($idrecord = $idrecords->fetchObject()) {
           $records = chado_generate_var('nd_geolocation',
                                         ['nd_geolocation_id' => $idrecord->nd_geolocation_id],
@@ -175,7 +174,7 @@ class sio__geographic_position extends ChadoField {
             $longitude_dev_term = chado_get_semweb_term('nd_geolocation', 'longitude_dev');
             $altitude_dev_term = chado_get_semweb_term('nd_geolocation', 'altitude_dev');
 
-            $entity->{$field_name}['und'][0]['value'] = [
+            $entity->{$field_name}['und'][$delta]['value'] = [
               $label_term => 'Geographic Position',
               $description_term => $record->description,
               $latitude_term => $record->latitude,
@@ -185,6 +184,7 @@ class sio__geographic_position extends ChadoField {
               $longitude_dev_term => $record->longitude_dev,
               $altitude_dev_term => $record->altitude_dev,
             ];
+            $delta++;
           } // foreach $record
         } // while fetchObject
       } // if $id_records

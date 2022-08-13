@@ -116,7 +116,7 @@ class local__analysis_project extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    $entity->{$field_name}['und'][0]['value'] = [];
 
     // sql for analysis
     if ($entity->chado_table == 'analysis') {

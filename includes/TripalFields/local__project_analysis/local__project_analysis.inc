@@ -116,7 +116,7 @@ class local__project_analysis extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    $entity->{$field_name}['und'][0]['value'] = [];
     $project_id = $chado_record->project_id;
 
     // find all analyses and assays linked to this project

@@ -109,7 +109,7 @@ class edam__accession extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    $entity->{$field_name}['und'][0]['value'] = [];
 
     // look up id values of all of the stock bundles
     $acbundles = [];

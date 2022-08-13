@@ -116,7 +116,7 @@ class local__stock_analysis extends ChadoField {
 
     // Set some defaults for the empty record.
     $chado_record = $entity->chado_record;
-    $entity->{$field_name}['und'] = [];
+    $entity->{$field_name}['und'][0]['value'] = [];
     $stock_id = $chado_record->stock_id;
 
     // find all analyses linked to this stock
