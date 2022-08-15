@@ -40,15 +40,29 @@ class data__jbrowse_coordinates_formatter extends ChadoFieldFormatter {
 
         // determine if present in JBrowse. The feature table has had the dbxref value
         // set if present in JBrowse, see notebook page 78 July 11, 2020
-        $sql = "SELECT urlprefix from {db} WHERE db_id=(SELECT db_id FROM {dbxref} WHERE dbxref_id=(SELECT dbxref_id from {feature} WHERE type_id=(SELECT cvterm_id FROM {cvterm} WHERE name=:chromosome AND cv_id=(SELECT cv_id FROM {cv} WHERE name=:sequence)) AND uniquename=:uniquename))";
-        $results = chado_query($sql, [':chromosome' => 'chromosome', ':sequence' => 'sequence', ':uniquename' => $srcfeature]);
+        $sql = "SELECT urlprefix from {db} WHERE db_id=(
+          SELECT db_id FROM {dbxref} WHERE dbxref_id=(
+            SELECT dbxref_id from {feature} WHERE type_id=(
+              SELECT cvterm_id FROM {cvterm} WHERE name=:chromosome AND cv_id=(
+                SELECT cv_id FROM {cv} WHERE name=:sequence
+              )
+            ) AND uniquename=:uniquename
+          )
+        )";
+        $results = chado_query($sql, [':chromosome' => 'chromosome',
+                                      ':sequence' => 'sequence',
+                                      ':uniquename' => $srcfeature]);
         if ($results) {
           $obj = $results->fetchObject();
           if ($obj) {
-            // because the urlprefix from the db table is already encoded when Tripal
-            // JBrowse created it, we need to unencode it first, and add the leading /
-            // to make url not a relative url, and /data suffix as Tripal JBrowse uses
-            $jbrowseurl = '/' . urldecode($obj->urlprefix) . '/data&loc=' . $urlsuffix . '&highlight=' . $highlight;
+            // Because the urlprefix from the db table is already encoded when Tripal
+            // JBrowse created it, we need to unencode it first, and add a leading '/' to
+            // make the url not a relative url, and add '/data' suffix as Tripal JBrowse uses.
+            $urlprefix = $obj->urlprefix;
+            if (!preg_match('/^\//', $urlprefix)) {
+              $urlprefix = '/' . $urlprefix;
+            }
+            $jbrowseurl = urldecode($urlprefix) . '/data&loc=' . $urlsuffix . '&highlight=' . $highlight;
             $display_as = t('<a href="!url">'.$display_as.'</a>', ['!url' => $jbrowseurl]);
             $locations[] = $display_as;
           }
