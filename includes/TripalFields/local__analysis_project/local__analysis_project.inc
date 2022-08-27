@@ -129,6 +129,11 @@ class local__analysis_project extends ChadoField {
       $sql = "SELECT AP.project_id FROM {assay_project} AP"
            . " WHERE assay_id=:record_id";
     }
+    elseif ($entity->chado_table == 'featuremap') {
+      $record_id = $chado_record->featuremap_id;
+      $sql = "SELECT AP.project_id FROM {project_featuremap} AP"
+           . " WHERE featuremap_id=:record_id";
+    }
     else { // unsupported table
       return;
     }

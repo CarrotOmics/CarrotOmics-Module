@@ -236,6 +236,19 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
+
+    $field_name = 'local__analysis_project';
+    $field_type = 'local__analysis_project';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
   }
 
   return $info;
@@ -467,7 +480,8 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
   }
 
   if ( ($bundle->data_table == 'analysis')
-    or ($bundle->data_table == 'assay') ) {
+    or ($bundle->data_table == 'assay')
+    or ($bundle->data_table == 'featuremap') ) {
     $field_name = 'local__analysis_project';
     $field_type = 'local__analysis_project';
     $instances[$field_name] = [
