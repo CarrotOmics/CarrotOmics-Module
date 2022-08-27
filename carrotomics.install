@@ -67,18 +67,17 @@ function carrotomics_install() {
  * @ingroup carrotomics
  */
 function carrotomics_uninstall() {
-  db_drop_table('chado.stock_analysis');
   db_drop_field('chado.nd_geolocation', 'latitude_dev');
   db_drop_field('chado.nd_geolocation', 'longitude_dev');
   db_drop_field('chado.nd_geolocation', 'altitude_dev');
+  db_drop_table('chado.stock_analysis');
+  db_drop_table('chado.project_featuremap');
 }
 
 /**
- * Add custom tables:
- *   stock_analysis
+ * Add custom stock_analysis table
  */
-function carrotomics_add_custom_tables() {
-  // Add stock_analysis table
+function carrotomics_add_table_stock_analysis() {
   $schema = [
     'fields' => [
       'stock_analysis_id' => ['type' => 'serial', 'not null' => TRUE],
@@ -112,6 +111,51 @@ function carrotomics_add_custom_tables() {
 }
 
 /**
+ * Add custom project_featuremap table
+ */
+function carrotomics_add_table_project_featuremap() {
+  $schema = [
+    'fields' => [
+      'project_featuremap_id' => ['type' => 'serial', 'not null' => TRUE],
+      'project_id' => ['type' => 'int', 'not null' => TRUE],
+      'featuremap_id' => ['type' => 'int', 'not null' => TRUE],
+    ],
+    'primary key' => ['project_featuremap_id'],
+    'foreign keys' => [
+      'project' => [
+        'table' => 'project',
+        'columns' => [
+          'project_id' => 'project_id',
+        ],
+      ],
+      'featuremap' => [
+        'table' => 'featuremap',
+        'columns' => [
+          'featuremap_id' => 'featuremap_id',
+        ],
+      ],
+    ],
+    'indexes' => [
+      'project_featuremap_idx1' => ['project_id'],
+      'project_featuremap_idx2' => ['featuremap_id'],
+    ],
+    'unique keys' => [
+      'project_featuremap_unique_uq1' => ['project_id', 'featuremap_id'],
+    ],
+  ];
+  chado_create_custom_table('project_featuremap', $schema, TRUE, NULL, FALSE);
+}
+
+/**
+ * Add custom tables:
+ *   stock_analysis, project_featuremap
+ */
+function carrotomics_add_custom_tables() {
+  carrotomics_add_table_stock_analysis();
+  carrotomics_add_table_project_featuremap();
+}
+
+/**
  * Add three new custom columns to chado.nd_geolocation table
  * to store uncertainty (plus or minus) values
  */
@@ -120,16 +164,19 @@ function carrotomics_update_nd_geolocation() {
     'type' => 'float',
     'size' => 'normal',
     'not null' => FALSE,
+    'description' => 'Half of the width of the range of uncertainty of latitude',
   ]);
   db_add_field('chado.nd_geolocation', 'longitude_dev', [
     'type' => 'float',
     'size' => 'normal',
     'not null' => FALSE,
+    'description' => 'Half of the width of the range of uncertainty of longitude',
   ]);
   db_add_field('chado.nd_geolocation', 'altitude_dev', [
     'type' => 'float',
     'size' => 'normal',
     'not null' => FALSE,
+    'description' => 'Half of the width of the range of uncertainty of altitude',
   ]);
 }
 
@@ -235,4 +282,17 @@ function carrotomics_add_cv_terms() {
     'definition' => 'Total number of linkage groups in a linkage map.',
   ]);
 
+}
+
+/**
+ * Add new project_featuremap table
+ */
+function carrotomics_update_7100() {
+  try {
+    carrotomics_add_table_project_featuremap();
+  }
+  catch (\PDOException $e) {
+    $error = $e->getMessage();
+    throw new DrupalUpdateException('Could not perform update: '. $error);
+  }
 }
