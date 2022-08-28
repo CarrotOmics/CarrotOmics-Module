@@ -255,6 +255,20 @@ function carrotomics_add_cv_terms() {
   ]);
 
   $term = chado_insert_cvterm([
+    'id' => 'local:stock_project',
+    'name' => 'stock_project',
+    'cv_name' => 'local',
+    'definition' => 'Used for a Tripal Field to link all stocks to projects that use them',
+  ]);
+
+  $term = chado_insert_cvterm([
+    'id' => 'local:project_stock',
+    'name' => 'project_stock',
+    'cv_name' => 'local',
+    'definition' => 'Used for a Tripal Field to link all projects containing a given stock',
+  ]);
+
+  $term = chado_insert_cvterm([
     'id' => 'local:Number_of_markers',
     'name' => 'Number of markers',
     'cv_name' => 'local',

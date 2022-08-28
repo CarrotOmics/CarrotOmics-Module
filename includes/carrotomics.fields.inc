@@ -83,6 +83,19 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
+
+    $field_name = 'local__stock_project';
+    $field_type = 'local__stock_project';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
   }
 
   // for biomaterial entity
@@ -171,6 +184,19 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     or ($term_accession == 'local__Genome Project') ) {
     $field_name = 'local__project_analysis';
     $field_type = 'local__project_analysis';
+    $info[$field_name] = [
+      'field_name' => $field_name,
+      'type' => $field_type,
+      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
+      'locked' => FALSE,
+      'storage' => [
+        'type' => 'field_chado_storage',
+      ],
+      'settings' => [],
+    ];
+
+    $field_name = 'local__project_stock';
+    $field_type = 'local__project_stock';
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -405,6 +431,40 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
         ],
       ],
     ];
+
+    $field_name = 'local__stock_project';
+    $field_type = 'local__stock_project';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Related Projects',
+      'description' => 'Projects related to this stock',
+      'required' => FALSE,
+      'settings' => [
+        'auto_attach' => TRUE,
+        'chado_table' => $bundle->data_table,
+        'chado_column' => 'project_id',
+        'base_table' => $bundle->data_table,
+        'term_name' => 'local:stock_project',
+        'term_accession' => 'stock_project',
+        'term_vocabulary' => 'local',  // database name, not CV name
+      ],
+      'widget' => [
+        'type' => 'local__stock_project_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'local__stock_project_formatter',
+          'settings' => [
+            'title' => 'TODO8369',  // Table Header
+            'empty' => 'TODO8370',  // Empty text
+          ],
+        ],
+      ],
+    ];
   }
 
   if ($bundle->data_table == 'biomaterial') {
@@ -622,6 +682,40 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
           'settings' => [
             'title' => 'TODO8365',  // Table Header
             'empty' => 'TODO8366',  // Empty text
+          ],
+        ],
+      ],
+    ];
+
+    $field_name = 'local__project_stock';
+    $field_type = 'local__project_stock';
+    $instances[$field_name] = [
+      'field_name' => $field_name,
+      'entity_type' => $entity_type,
+      'bundle' => $bundle->name,
+      'label' => 'Related Stocks',
+      'description' => 'Stocks related to this project',
+      'required' => FALSE,
+      'settings' => [
+        'auto_attach' => TRUE,
+        'chado_table' => $bundle->data_table,
+        'chado_column' => 'project_id',
+        'base_table' => $bundle->data_table,
+        'term_name' => 'local:project_stock',
+        'term_accession' => 'project_stock',
+        'term_vocabulary' => 'local',  // database name, not CV name
+      ],
+      'widget' => [
+        'type' => 'local__project_stock_widget',
+        'settings' => [],
+      ],
+      'display' => [
+        'default' => [
+          'label' => 'inline',
+          'type' => 'local__project_stock_formatter',
+          'settings' => [
+            'title' => 'TODO8367',  // Table Header
+            'empty' => 'TODO8368',  // Empty text
           ],
         ],
       ],
