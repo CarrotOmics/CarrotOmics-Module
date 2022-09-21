@@ -99,6 +99,18 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Make marker_locus match genetic_marker' button
+  $form['genetic_marker_marker_locus_fix_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'genetic_marker_marker_locus_fix_btn',
+    '#value'  => 'Make marker_locus match genetic_marker',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Removes non-alphanumeric or underscore from all features of type genetic_marker,"
+                 . " and make sure corresponding marker_locus features have the same uniquename"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Populate stock_analysis' button
   $form['stock_analysis_btn'] = [
     '#type'   => 'submit',
@@ -199,6 +211,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'qtl_abbrev_btn') {
     [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
+  }
+  else if ($triggering_element == 'genetic_marker_marker_locus_fix_btn') {
+    [$nerrors, $status] = carrotomics_admin_genetic_marker_marker_locus_fix();
   }
   else if ($triggering_element == 'stock_analysis_btn') {
     [$nerrors, $status] = carrotomics_admin_stock_analysis_linker();
@@ -519,6 +534,102 @@ function carrotomics_admin_qtl_abbrev() {
 
   $status = t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
               ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ *
+ * Removes non-alphanumeric or underscore from all features of type genetic_marker,
+ * and make sure corresponding marker_locus features have the same uniquename.
+ * genetic_marker and marker_locus are related through the feature_relationship table.
+ *
+ */
+function carrotomics_admin_genetic_marker_marker_locus_fix() {
+  $status = '';
+  $nupdated_g_m = 0;
+  $nupdated_m_l = 0;
+  $errors = '';
+  $nerrors = 0;
+
+  // get cvterm_id for sequence::genetic_marker (1911)
+  [$error, $genetic_marker_type_id] = carrotomics_lookup_cvterm_id('sequence', 'genetic_marker');
+  if ($error ){ return[$error, $genetic_marker_type_id]; }
+
+  // get cvterm_id for MAIN::marker_locus (51099)
+  [$error, $marker_locus_type_id] = carrotomics_lookup_cvterm_id('MAIN', 'marker_locus');
+  if ($error ){ return[$error, $marker_locus_type_id]; }
+
+  // get cvterm_id for relationship::instance_of (50973)
+  [$error, $instance_of_type_id] = carrotomics_lookup_cvterm_id('relationship', 'instance_of');
+  if ($error ){ return[$error, $instance_of_type_id]; }
+
+  // Although this could all be done in SQL, implement update as an inefficient loop
+  // so that if anything goes wrong a useful error message can be generated, most
+  // likely breaking the unique constraint somehow.
+  $sql1 = 'SELECT F1.feature_id AS fid1, F1.uniquename AS un1, F2.feature_id AS fid2, F2.uniquename AS un2 FROM {feature} F1'
+        . ' LEFT JOIN feature_relationship FR ON F1.feature_id=FR.object_id'
+        . ' LEFT JOIN feature F2 ON FR.subject_id=F2.feature_id'
+        . ' WHERE F1.type_id=:genetic_marker_type_id'
+        . ' AND FR.type_id=:instance_of_type_id'
+        . ' AND F2.type_id=:marker_locus_type_id'
+        . " AND (F1.uniquename ~ '[^A-Za-z0-9_]' OR NOT F1.uniquename = F2.uniquename)"
+        . ' ORDER BY F1.feature_id';
+  $args1 = [':genetic_marker_type_id' => $genetic_marker_type_id,
+            ':instance_of_type_id' => $instance_of_type_id,
+            ':marker_locus_type_id' => $marker_locus_type_id];
+  try {
+    $results1 = chado_query($sql1, $args1);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+
+  // main processing loop
+  while ($obj = $results1->fetchObject()) {
+    $fid1 = $obj->fid1;
+    $un1 = $obj->un1;
+    $origun1 = $un1;
+    $fid2 = $obj->fid2;
+    $un2 = $obj->un2;
+
+    // Part 1, fix genetic_marker uniquename "bad" characters
+    if (preg_match('/[^A-Za-z0-9_]/', $un1)) {
+      $un1 = preg_replace('/[^A-Za-z0-9_]/', '_', $un1);
+      $sql2 = 'UPDATE {feature} SET uniquename=:un1 WHERE feature_id=:fid1';
+      $args2 = [':un1' => $un1, ':fid1' => $fid1];
+      try {
+        chado_query($sql2, $args2);
+        $nupdated_g_m++;
+      } catch (Exception $e) {
+        $errors .= "<br>Error updating genetic_marker feature_id=$fid1 from \"$origun1\" to \"$un1\" ".$e->getMessage()."\n";
+        $nerrors++;
+      }
+    }
+
+    // Part 2, fix cases where marker_locus uniquename is different from genetic_marker
+    // uniquename (which was possibly updated in Part 1).
+    if ($un2 != $un1) {
+      $sql3 = 'UPDATE {feature} SET uniquename=:un1 WHERE feature_id=:fid2';
+      $args3 = [':un1' => $un1, ':fid2' => $fid2];
+      try {
+        chado_query($sql3, $args3);
+        $nupdated_m_l++;
+      } catch (Exception $e) {
+        $errors .= "<br>Error updating marker_locus feature_id=$fid2 from \"$un2\" to \"$un1\" ".$e->getMessage()."\n";
+        $nerrors++;
+      }
+    }
+    if ($nerrors) {
+      $errors .= "<br>Error encountered, processing stopped.\n";
+      break;
+    }
+  }
+
+  $status .= t('Updated @nupdated_g_m genetic_marker uniquename records,'
+            . ' updated @nupdated_m_l marker_locus uniquename records,'
+            . ' @nerrors errors',
+              ['@nupdated_g_m' => $nupdated_g_m,
+               '@nupdated_m_l' => $nupdated_m_l,
+               '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
 }
 

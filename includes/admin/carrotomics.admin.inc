@@ -37,6 +37,7 @@ function carrotomics_admin_page() {
   $items[] = "Populate feature residues Length and Checksum";
   $items[] = "GBS Marker Locations";
   $items[] = "Generate QTL Abbreviations";
+  $items[] = "Fix genetic_marker and marker_locus names";
   $items[] = "Generate stock_analysis links";
   $items[] = "Update stock_featuremap table";
   $items[] = "Generate map properties";
