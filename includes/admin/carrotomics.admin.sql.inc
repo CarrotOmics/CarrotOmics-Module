@@ -421,7 +421,7 @@ function carrotomics_admin_gbs_location() {
     return [1, $e->getMessage()];
   }
 
-  // initialize the output file conent
+  // initialize the output file content
   $content = implode("\t", $headers) . "\n";
   $nfound = 0;
 
@@ -755,7 +755,7 @@ function carrotomics_admin_populate_stock_featuremap() {
     return[1, $e->getMessage()];
   }
 
-  // initialize the output file conent
+  // initialize the output file content
   $content = implode("\t", $headers) . "\n";
   $nfound = 0;
   $seen = [];  // I can't easily DISTINCT with so many columns, remove duplicates in the loop

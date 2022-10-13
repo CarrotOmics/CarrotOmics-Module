@@ -15,6 +15,7 @@ require_once('includes/admin/carrotomics.admin.inc');
 require_once('includes/admin/carrotomics.admin.pub.inc');
 require_once('includes/admin/carrotomics.admin.sql.inc');
 require_once('includes/admin/carrotomics.admin.validate.inc');
+require_once('includes/admin/carrotomics.admin.export.inc');
 
 
 /**
@@ -122,6 +123,18 @@ function carrotomics_menu() {
     'weight' => $weight++,
   ];
 
+  $items['admin/carrotomics/validate'] = [
+    'title' => 'Validation Functions',
+    'description' => 'Functions to find troublesome data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['carrotomics_admin_validate_form'],
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.validate.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => $weight++,
+  ];
+
   // we need at least two items for these tabs to show up
   $items['admin/carrotomics/pub'] = [
     'title' => 'Publication Functions',  // note that tab titles display in all upper-case
@@ -135,6 +148,18 @@ function carrotomics_menu() {
     'weight' => $weight++,
   ];
 
+  $items['admin/carrotomics/export'] = [
+    'title' => 'Data Export Functions',
+    'description' => 'Data export tools',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['carrotomics_admin_export_form'],
+    'access arguments' => ['admin carrotomics'],
+    'access callback' => 'carrotomics_access',
+    'file' => '/includes/admin/carrotomics.admin.export.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => $weight++,
+  ];
+
   $items['admin/carrotomics/sql'] = [
     'title' => 'SQL Functions',
     'description' => 'Custom SQL Functions to modify chado',
@@ -143,18 +168,6 @@ function carrotomics_menu() {
     'access arguments' => ['admin carrotomics'],
     'access callback' => 'carrotomics_access',
     'file' => '/includes/admin/carrotomics.admin.sql.inc',
-    'type' => MENU_LOCAL_TASK,
-    'weight' => $weight++,
-  ];
-
-  $items['admin/carrotomics/validate'] = [
-    'title' => 'Validation Functions',
-    'description' => 'Functions to find troublesome data',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => ['carrotomics_admin_validate_form'],
-    'access arguments' => ['admin carrotomics'],
-    'access callback' => 'carrotomics_access',
-    'file' => '/includes/admin/carrotomics.admin.validate.inc',
     'type' => MENU_LOCAL_TASK,
     'weight' => $weight++,
   ];

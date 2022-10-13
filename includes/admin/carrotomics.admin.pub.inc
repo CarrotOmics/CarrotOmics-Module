@@ -710,7 +710,7 @@ function carrotomics_admin_merge_publications($min_pub_id = NULL) {
     }
   }
 
-  // initialize the output file conent
+  // initialize the output file content
   $content = implode("\t", $headers) . "\n";
   $nfound = 0;
 
