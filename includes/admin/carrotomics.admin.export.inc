@@ -330,6 +330,7 @@ function carrotomics_admin_marker_gff3($jbrowse_analysis, $marker_gff3_filename)
     $entity = chado_get_record_entity_by_table('feature', $obj->genetic_marker_feature_id);
 
     // Use the "short" name
+    $marker_unique_name = $obj->marker_locus_uniquename;
     $marker_name = $obj->marker_locus_name;
     $chr = $obj->seq_uniquename;
     // fmin is 0-based
@@ -341,7 +342,7 @@ function carrotomics_admin_marker_gff3($jbrowse_analysis, $marker_gff3_filename)
     if (!$strand) {
       $strand = '.';
     }
-    $attributes = "ID=$marker_name;Name=$marker_name;dbxref=CarrotOmics:$entity";
+    $attributes = "ID=$marker_unique_name;Name=$marker_name;dbxref=CarrotOmics:$entity";
 
     // [0]seqid [1]source [2]type [3]start [4]end [5]score [6]strand [7]phase [8]attribues
     $cols = [ $chr, 'mapped_markers', 'genetic_marker',
