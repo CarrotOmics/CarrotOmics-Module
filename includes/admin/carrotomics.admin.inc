@@ -22,6 +22,13 @@ function carrotomics_admin_page() {
 
   // Description.
   $items = [];
+
+  // Validation Functions tab
+  $items[] = "Find Unpublished Content";
+  $items[] = "Validate CarrotOmics accessions";
+  $items[] = "Validate public:// chado.fileloc entries";
+
+  // Publication Functions tab
   $items[] = "Validate publications";
   $items[] = "Update publication Unique Local Identifier";
   $items[] = "Generate publication URLs";
@@ -31,21 +38,22 @@ function carrotomics_admin_page() {
   $items[] = "Find Duplicate Publications";
   $items[] = "Find Unlinked Errata";
 
+  // Data Export Functions tab
+  $items[] = "GBS Marker Locations";
+  $items[] = "Update stock_featuremap table";
+  $items[] = "Export gff3 of all mapped markers";
+
+  // SQL Functions tab
   $items[] = "Clean MD5 Checksums";
   $items[] = "Clean Null taxids";
   $items[] = "Populate organism abbreviations";
   $items[] = "Populate feature residues Length and Checksum";
-  $items[] = "GBS Marker Locations";
   $items[] = "Generate QTL Abbreviations";
-  $items[] = "Fix genetic_marker and marker_locus names";
+  $items[] = "Make marker_locus match genetic_marker";
   $items[] = "Generate stock_analysis links";
-  $items[] = "Update stock_featuremap table";
   $items[] = "Generate map properties";
   $items[] = "Assign organisms to phylonodes";
 
-  $items[] = "Find Unpublished Content";
-  $items[] = "Validate CarrotOmics accessions";
-  $items[] = "Validate public:// chado.fileloc entries";
   $description =  theme('item_list', ['items' => $items]);
 
   $content =<<<ADMIN_PAGE
