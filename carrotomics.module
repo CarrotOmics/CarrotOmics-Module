@@ -11,12 +11,12 @@
 require_once('api/carrotomics.api.inc');
 require_once('includes/carrotomics.fields.inc');
 require_once('includes/carrotomics.brapi.inc');
+require_once('includes/carrotomics.blast_ui.linkouts.inc');
 require_once('includes/admin/carrotomics.admin.inc');
 require_once('includes/admin/carrotomics.admin.pub.inc');
 require_once('includes/admin/carrotomics.admin.sql.inc');
 require_once('includes/admin/carrotomics.admin.validate.inc');
 require_once('includes/admin/carrotomics.admin.export.inc');
-
 
 /**
  * Implements hook_chado_schema_v1_3_table()
