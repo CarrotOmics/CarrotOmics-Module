@@ -86,6 +86,25 @@ function carrotomics_admin_export_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Generate a list of all organisms' button
+  $organism_list_filename = 'public://mcl/user/'.$user->name.'/organism_list.tsv';
+  $organism_list_url = file_create_url($organism_list_filename);
+  $form['organism_list_filename'] = [
+    '#type' => 'hidden',
+    '#value' => $organism_list_filename,
+  ];
+  $form['org_list_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'org_list_btn',
+    '#value'  => 'Generate a list of all organisms',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate a tsv file of all organism_id numbers and associated NCBI"
+                 . " and GRIN taxonomy ID numbers currently in CarrotOmics"
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$organism_list_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
   return $form;
 }
 
@@ -122,6 +141,10 @@ function carrotomics_admin_export_form_submit($form, &$form_state) {
     $jbrowse_analysis = $form_state['values']['marker_gff3_select'];
     $marker_gff3_filename = $form_state['values']['marker_gff3_filename'];
     [$nerrors, $status] = carrotomics_admin_marker_gff3($jbrowse_analysis, $marker_gff3_filename);
+  }
+  else if ($triggering_element == 'org_list_btn') {
+    $organism_list_filename = $form_state['values']['organism_list_filename'];
+    [$nerrors, $status] = carrotomics_admin_organism_list($organism_list_filename);
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -359,5 +382,56 @@ function carrotomics_admin_marker_gff3($jbrowse_analysis, $marker_gff3_filename)
   }
   else {
     return [0, "There were no markers found with genome locations"];
+  }
+}
+
+/**
+ * Get a list of analyses linked to JBrowse instances to use to populate pulldown
+ *
+ */
+function carrotomics_admin_organism_list($organism_list_filename) {
+  $nfound = 0;
+
+  // All organisms, they may or may not have taxid values
+  $sql = "SELECT O.organism_id,"
+       . " (SELECT accession FROM {dbxref} D1 JOIN {organism_dbxref} OD1 ON OD1.dbxref_id=D1.dbxref_id"
+       . "   WHERE OD1.organism_id=O.organism_ID AND D1.db_id=(SELECT db_id FROM {db} WHERE name='NCBITaxon'))"
+       . " AS ncbi_taxid,"
+       . " (SELECT accession FROM {dbxref} D2 JOIN {organism_dbxref} OD2 ON OD2.dbxref_id=D2.dbxref_id"
+       . "   WHERE OD2.organism_id=O.organism_ID AND D2.db_id=(SELECT db_id FROM {db} WHERE name='GRINTaxon'))"
+       . " AS grin_taxid,"
+       . " O.genus, O.species,"
+       . " (SELECT name FROM {cvterm} where cvterm_id=O.type_id) AS infraspecific_type, O.infraspecific_name,"
+       . " O.common_name, O.abbreviation, O.comment"
+       . " FROM {organism} O ORDER BY O.organism_id";
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  // Not including comment because it may contain line breaks
+  $content = implode("\t", ['organism_id', 'ncbi_taxid', 'grin_taxid',
+                            'genus', 'species', 'infraspecific_type', 'infraspecific_name',
+                            'common_name', 'abbreviation']) . "\n";
+  while ($obj = $results->fetchObject()) {
+    $itype = $obj->infraspecific_type;
+    if ($itype == 'no_rank') {
+      $itype = '';
+    }
+    $cols = [ $obj->organism_id, $obj->ncbi_taxid, $obj->grin_taxid,
+              $obj->genus, $obj->species, $itype, $obj->infraspecific_name,
+              $obj->common_name, $obj->abbreviation];
+    $content .= implode("\t", $cols) . "\n";
+    $nfound++;
+  }
+  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
+  file_put_contents($organism_list_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound organisms saved, download them from the link below the button"];
+  }
+  else {
+    return [1, "There are no organisms, this should not happen"];
   }
 }
