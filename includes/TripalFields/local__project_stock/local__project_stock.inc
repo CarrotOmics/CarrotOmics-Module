@@ -170,7 +170,7 @@ class local__project_stock extends ChadoField {
 
         $bundletable = "chado_bio_data_" . $bid;
         // can't put stock_str in $args because it will be quoted
-        $sql3 = 'SELECT B.entity_id, A.name FROM ['.$bundletable.'] B'
+        $sql3 = 'SELECT B.entity_id, A.name, A.uniquename FROM ['.$bundletable.'] B'
              . ' INNER JOIN {stock} A on B.record_id = A.stock_id'
              . ' WHERE B.record_id IN ('.$stock_str.')';
         $args3 = [];
@@ -179,8 +179,10 @@ class local__project_stock extends ChadoField {
           while ( $record = $records3->fetchObject() ) {
             $eid = $record->entity_id;
             $name = $record->name;
+            $uniquename = $record->uniquename;
             $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
             $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
+            $entity->{$field_name}['und'][$delta]['value']['schema:uniquename'] = $uniquename;
             if ($eid) {
               $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
             }

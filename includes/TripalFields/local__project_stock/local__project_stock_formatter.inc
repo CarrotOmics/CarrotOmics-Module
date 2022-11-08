@@ -15,7 +15,7 @@ class local__project_stock_formatter extends ChadoFieldFormatter {
   public function view(&$element, $entity_type, $entity, $langcode, $items, $display) {
     $settings = $display['settings'];
     $rows = [];
-    $headers = ['Stock', 'Stock Type'];
+    $headers = ['Stock', 'Unique Name', 'Stock Type'];
 
     foreach ($items as $delta => $item) {
       if (empty($item['value'])) {
@@ -24,6 +24,7 @@ class local__project_stock_formatter extends ChadoFieldFormatter {
       // link to the entity
       $label = $item['value']['rdfs:label'];
       $name = $item['value']['schema:name'];
+      $uniquename = $item['value']['schema:uniquename'];
       if ($name) {
         if (array_key_exists('entity', $item['value'])) {
           list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
@@ -31,6 +32,7 @@ class local__project_stock_formatter extends ChadoFieldFormatter {
         }
         $rows[] = [
           $name,
+          $uniquename,
           $label,
         ];
       }
@@ -53,10 +55,10 @@ class local__project_stock_formatter extends ChadoFieldFormatter {
 
     $caption = '';
     if ($total_records == 1) {
-      $caption = 'There is ' . count($rows) . ' project.';
+      $caption = 'There is ' . count($rows) . ' stock.';
     }
     else {
-      $caption = 'There are ' . count($rows) . ' projects.';
+      $caption = 'There are ' . count($rows) . ' stocks.';
     }
     // for now I will not use a caption
     $caption = '';
