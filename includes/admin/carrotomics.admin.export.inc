@@ -118,9 +118,28 @@ function carrotomics_admin_export_form($form, &$form_state) {
     '#value'  => 'Generate a list of all GRIN stocks and linked projects',
     '#prefix' => '<div style="padding-top:30px;"><em>'
                  . "Generate a tsv file of all GRIN germplasm accessions (stocks) currently in CarrotOmics,"
-                 . " any lined projects"
+                 . " and any linked projects"
                  . "</em></div><br />",
     '#suffix' => "<div>Download the generated list from <a href=\"".$grin_stock_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
+  // Add a 'Generate a list of all images of stocks' button
+  $stock_image_filename = 'public://mcl/user/'.$user->name.'/stock_image.tsv';
+  $stock_image_url = file_create_url($stock_image_filename);
+  $form['stock_image_filename'] = [
+    '#type' => 'hidden',
+    '#value' => $stock_image_filename,
+  ];
+  $form['stock_image_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'stock_image_btn',
+    '#value'  => 'Generate a list of all images of stocks',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate a tsv file of all images of stocks (usually germplasm accessions)"
+                 . " currently in CarrotOmics"
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$stock_image_url."\">here</a></div><br />"
                  . "<hr>",
   ];
 
@@ -168,6 +187,10 @@ function carrotomics_admin_export_form_submit($form, &$form_state) {
   else if ($triggering_element == 'grin_stock_btn') {
     $grin_stock_filename = $form_state['values']['grin_stock_filename'];
     [$nerrors, $status] = carrotomics_admin_grin_stock($grin_stock_filename);
+  }
+  else if ($triggering_element == 'stock_image_btn') {
+    $stock_image_filename = $form_state['values']['stock_image_filename'];
+    [$nerrors, $status] = carrotomics_admin_stock_image($stock_image_filename);
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -488,6 +511,40 @@ function carrotomics_admin_grin_stock($grin_stock_filename) {
   }
   // save file in mcl directory
   file_put_contents($grin_stock_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound records saved, download them from the link below the button"];
+  }
+  else {
+    return [1, "There are no GRIN accessions, this should not happen"];
+  }
+}
+
+/**
+ * Get a list of images of stocks
+ *
+ */
+function carrotomics_admin_stock_image($stock_image_filename) {
+  $nfound = 0;
+
+  $sql = "SELECT I.image_uri, S.uniquename AS accession FROM {eimage} I"
+       . " LEFT JOIN {stock_image} SI ON I.eimage_id=SI.eimage_id"
+       . " LEFT JOIN {stock} S ON SI.stock_id=S.stock_id"
+       . " ORDER BY S.uniquename, I.image_uri";
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $content = implode("\t", ['accession', 'image_uri']) . "\n";
+  while ($obj = $results->fetchObject()) {
+    $cols = [$obj->accession, $obj->image_uri];
+    $content .= implode("\t", $cols) . "\n";
+    $nfound++;
+  }
+  // save file in mcl directory
+  file_put_contents($stock_image_filename, $content);
 
   if ( $nfound ) {
     return [0, "$nfound records saved, download them from the link below the button"];
