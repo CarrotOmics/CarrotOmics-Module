@@ -449,9 +449,19 @@ function carrotomics_admin_validate_eimage() {
       $outputmessage .= "<li>Image not present \"$full_image_path\"</li>";
       $nerrors++;
     }
-    // 2. validate thumbnail image existence
+    // 2. validate full resolution image size
+    elseif (!filesize($full_image_path)) {
+      $outputmessage .= "<li>Zero size image file \"$full_image_path\"</li>";
+      $nerrors++;
+    }
+    // 3. validate thumbnail image existence
     if (!file_exists($thumbnail_path)) {
       $outputmessage .= "<li>Thumbnail not present \"$thumbnail_path\"</li>";
+      $nerrors++;
+    }
+    // 4. validate thumbnail image size
+    elseif (!filesize($thumbnail_path)) {
+      $outputmessage .= "<li>Zero size thumbnail image file \"$thumbnail_path\"</li>";
       $nerrors++;
     }
     if ($nerrors >= 100) {
