@@ -112,13 +112,14 @@ class iao__image extends ChadoField {
     $chado_record = $entity->chado_record;
     $entity->{$field_name}['und'][0]['value'] = [];
 
-    // Using the nd_experiment_stock table, find all nd_geolocation records
+    // Using the stock_image linker table, find all eimage records
     // linked to this record
     $records = chado_generate_var('stock_image',
                                   ['stock_id' => $chado_record->stock_id],
                                   ['return_array' => TRUE]);
     // iterate to retrieve all eimage_id values for this stock_id
     $one_eimage_record = [];
+    $delta = 0;
     foreach ($records as $record) {
       if ($record->eimage_id) {
         $eimage_id = $record->eimage_id->eimage_id;
@@ -133,11 +134,11 @@ class iao__image extends ChadoField {
           $label = $annotation->type_id->name;  // the CV term for this annotation
           $value = $annotation->value;  // the value of the annotation
           $one_eimage_record['annotations'][$label] = $value;
-          
         }
 
         // add everything about this one image to the entity array as another 'value' element
-        $entity->{$field_name}['und'][] = ['value' => $one_eimage_record];
+        $entity->{$field_name}['und'][$delta]['value'] = $one_eimage_record;
+        $delta++;
       }
     }
   }
