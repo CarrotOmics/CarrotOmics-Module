@@ -56,6 +56,17 @@ function carrotomics_admin_validate_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Validate eimage urls' button
+  $form['val_eimage_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'val_eimage_btn',
+    '#value'  => 'Validate eimage urls',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Validate all eimage urls to verify file is present"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   return $form;
 }
 
@@ -88,6 +99,9 @@ function carrotomics_admin_validate_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'val_fileloc_btn') {
     [$nerrors, $status] = carrotomics_admin_validate_fileloc();
+  }
+  else if ($triggering_element == 'val_eimage_btn') {
+    [$nerrors, $status] = carrotomics_admin_validate_eimage();
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -342,7 +356,6 @@ function carrotomics_admin_validate_fileloc() {
   // then check each one
   $sql = "SELECT file_id, uri, md5checksum, size FROM {fileloc} ORDER BY file_id";
   $results = chado_query($sql, []);
-  $file_list = [];
   while ($obj = $results->fetchObject()) {
     $uri = $obj->uri;
     // we only validate local files using public:// prefix
@@ -356,7 +369,7 @@ function carrotomics_admin_validate_fileloc() {
       $entity_url = "/file/$entity";  // to_do: I bet there's a more correct way to do this
       // 1. validate existence
       if (!file_exists($real_path)) {
-        $outputmessage .= "<br>File not present \"<a href=\"$entity_url\">$uri</a>\"";
+        $outputmessage .= "<li>File not present \"<a href=\"$entity_url\">$uri</a>\"</li>";
         $nerrors++;
       }
       // 2. validate file permissions
@@ -399,5 +412,58 @@ function carrotomics_admin_validate_fileloc() {
   }
   else {
     return [0, "$nchecked public:// files checked, there were no problems found"];
+  }
+}
+
+/**
+ * Validate urls in the eimage table
+ *
+ */
+function carrotomics_admin_validate_eimage() {
+  // Ensure that all URLs in the chado.eimage table point to an existing file
+
+  // Ihe output message will be a list of problems found.
+  // It will be empty if everything is correct.
+  $outputmessage = '';
+  $nchecked = 0;
+  $nerrors = 0;
+
+  // get the base path of where eimage urls start
+#/var/www/2020-02-18/drupal-7.69/sites/default/files/bulk_data/carrotomics/germplasm/
+  $files_path = variable_get('file_public_path', conf_path() . '/files' ) . '/bulk_data/carrotomics/germplasm';
+  $files_path = drupal_realpath($files_path);
+
+  // get a list of files to check, order by file_id for a somewhat chronological list,
+  // then check each one
+  $sql = "SELECT eimage_id, image_uri FROM {eimage} ORDER BY eimage_id";
+  $results = chado_query($sql, []);
+  while ($obj = $results->fetchObject()) {
+    $eimage_id = $obj->eimage_id;
+    $image_uri = $obj->image_uri;
+    $nchecked++;
+    $full_image_path = $files_path . '/image/' . $image_uri;
+    $thumbnail_path = $files_path . '/icon/' . $image_uri;
+
+    // 1. validate full resolution image existence
+    if (!file_exists($full_image_path)) {
+      $outputmessage .= "<li>Image not present \"$full_image_path\"</li>";
+      $nerrors++;
+    }
+    // 2. validate thumbnail image existence
+    if (!file_exists($thumbnail_path)) {
+      $outputmessage .= "<li>Thumbnail not present \"$thumbnail_path\"</li>";
+      $nerrors++;
+    }
+    if ($nerrors >= 100) {
+      $outputmessage .= "<li value=\"0\">Too many errors, further errors are not shown</li>";
+      break;
+    }
+  }
+
+  if ($outputmessage) {
+    return [1, "$nerrors errors found<ol>$outputmessage</ol>"];
+  }
+  else {
+    return [0, "$nchecked files checked, there were no problems found"];
   }
 }
