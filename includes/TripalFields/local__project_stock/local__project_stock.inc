@@ -182,7 +182,7 @@ class local__project_stock extends ChadoField {
             $uniquename = $record->uniquename;
             $entity->{$field_name}['und'][$delta]['value']['rdfs:label'] = $type;
             $entity->{$field_name}['und'][$delta]['value']['schema:name'] = $name;
-            $entity->{$field_name}['und'][$delta]['value']['schema:uniquename'] = $uniquename;
+            $entity->{$field_name}['und'][$delta]['value']['data:0842'] = $uniquename;
             if ($eid) {
               $entity->{$field_name}['und'][$delta]['value']['entity'] = 'TripalEntity:' . $eid;
             }
