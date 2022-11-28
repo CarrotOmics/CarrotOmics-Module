@@ -24,7 +24,7 @@ class local__project_stock_formatter extends ChadoFieldFormatter {
       // link to the entity
       $label = $item['value']['rdfs:label'];
       $name = $item['value']['schema:name'];
-      $uniquename = $item['value']['EDAM:Identifier'];
+      $uniquename = $item['value']['data:0842'];
       if ($name) {
         if (array_key_exists('entity', $item['value'])) {
           list($entity_type, $entity_id) = explode(':', $item['value']['entity']);
