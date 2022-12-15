@@ -96,7 +96,19 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Populate stock_analysis' button
+  // Add a 'Generate biomaterial_analysis links' button
+  $form['biomaterial_analysis_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'biomaterial_analysis_btn',
+    '#value'  => 'Generate biomaterial_analysis links',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate links in the chado.biomaterial_analysis custom table"
+                 . " using projects common to both"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
+  // Add a 'Generate stock_analysis links' button
   $form['stock_analysis_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'stock_analysis_btn',
@@ -178,6 +190,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'genetic_marker_marker_locus_fix_btn') {
     [$nerrors, $status] = carrotomics_admin_genetic_marker_marker_locus_fix();
+  }
+  else if ($triggering_element == 'biomaterial_analysis_btn') {
+    [$nerrors, $status] = carrotomics_admin_biomaterial_analysis_linker();
   }
   else if ($triggering_element == 'stock_analysis_btn') {
     [$nerrors, $status] = carrotomics_admin_stock_analysis_linker();
@@ -548,6 +563,47 @@ function carrotomics_admin_genetic_marker_marker_locus_fix() {
 }
 
 /**
+ * Generate entries in the chado.biomaterial_analysis custom table.
+ * This information is derived from projects that have biomaterial
+ * and analyses in common.
+ *
+ */
+function carrotomics_admin_biomaterial_analysis_linker() {
+  $nadded = 0;
+  $nerrors = 0;
+  $errors = '';
+
+  // find all projects linked to biomaterial
+  $sql1 = "SELECT DISTINCT BP.biomaterial_id, PA.analysis_id"
+        . " FROM {biomaterial_project} BP"
+        . " LEFT JOIN {project_analysis} PA ON BP.project_id=PA.project_id"
+        . " LEFT JOIN {biomaterial_analysis} BA ON BP.biomaterial_id=BA.biomaterial_id"
+        . "   AND PA.analysis_id=BA.analysis_id"
+        . " WHERE BA.biomaterial_analysis_id IS NULL";
+  $args1 = [];
+  $records = chado_query($sql1, $args1);
+  if ($records) {
+    while ($record = $records->fetchObject()) {
+      $biomaterial_id = $record->biomaterial_id;
+      $analysis_id = $record->analysis_id;
+      // If project does not have any analyses, analysis_id will be null.
+      if ($biomaterial_id and $analysis_id) {
+        $sql2 = "INSERT INTO {biomaterial_analysis} (biomaterial_id, analysis_id)"
+              . " VALUES (:biomaterial_id, :analysis_id)";
+        $args2 = [':biomaterial_id' => $biomaterial_id,
+                  ':analysis_id' => $analysis_id];
+        $result = chado_query($sql2, $args2);
+        $nadded++;
+      }
+    }
+  }
+
+  $status = t('Added @nadded links, @nerrors errors',
+              ['@nadded' => $nadded, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
  * Generate entries in the chado.stock_analysis custom table that
  * are used by the local__stock_analysis field to link a stock to
  * any analyses using that stock. Here entries are derived from
@@ -555,6 +611,7 @@ function carrotomics_admin_genetic_marker_marker_locus_fix() {
  *
  */
 function carrotomics_admin_stock_analysis_linker() {
+// TO-DO now that TreeBase studies are projects, does this still work?
   $nexisting = 0;
   $nadded = 0;
   $nduplicated = 0;  // Redundant, due to multiple trees per study

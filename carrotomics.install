@@ -111,6 +111,42 @@ function carrotomics_add_table_stock_analysis() {
 }
 
 /**
+ * Add custom biomaterial_analysis table
+ */
+function carrotomics_add_table_biomaterial_analysis() {
+  $schema = [
+    'fields' => [
+      'biomaterial_analysis_id' => ['type' => 'serial', 'not null' => TRUE],
+      'biomaterial_id' => ['type' => 'int', 'not null' => TRUE],
+      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
+    ],
+    'primary key' => ['biomaterial_analysis_id'],
+    'foreign keys' => [
+      'biomaterial' => [
+        'table' => 'biomaterial',
+        'columns' => [
+          'biomaterial_id' => 'biomaterial_id',
+        ],
+      ],
+      'analysis' => [
+        'table' => 'analysis',
+        'columns' => [
+          'analysis_id' => 'analysis_id',
+        ],
+      ],
+    ],
+    'indexes' => [
+      'biomaterial_analysis_idx1' => ['biomaterial_id'],
+      'biomaterial_analysis_idx2' => ['analysis_id'],
+    ],
+    'unique keys' => [
+      'biomaterial_analysis_unique_uq1' => ['biomaterial_id', 'analysis_id'],
+    ],
+  ];
+  chado_create_custom_table('biomaterial_analysis', $schema, TRUE, NULL, FALSE);
+}
+
+/**
  * Add custom project_featuremap table
  */
 function carrotomics_add_table_project_featuremap() {
@@ -152,7 +188,10 @@ function carrotomics_add_table_project_featuremap() {
  */
 function carrotomics_add_custom_tables() {
   carrotomics_add_table_stock_analysis();
+  carrotomics_add_table_biomaterial_analysis();
   carrotomics_add_table_project_featuremap();
+  // CarrotOmics is more strict about stock uniquename.
+  chado_query('ALTER TABLE chado.stock ADD CONSTRAINT stock_c2 UNIQUE (uniquename)');
 }
 
 /**
@@ -304,6 +343,19 @@ function carrotomics_add_cv_terms() {
 function carrotomics_update_7100() {
   try {
     carrotomics_add_table_project_featuremap();
+  }
+  catch (\PDOException $e) {
+    $error = $e->getMessage();
+    throw new DrupalUpdateException('Could not perform update: '. $error);
+  }
+}
+
+/**
+ * Add new biomaterial_analysis table
+ */
+function carrotomics_update_7101() {
+  try {
+    carrotomics_add_table_biomaterial_analysis();
   }
   catch (\PDOException $e) {
     $error = $e->getMessage();

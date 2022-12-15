@@ -50,6 +50,7 @@ function carrotomics_admin_page() {
   $items[] = "Populate feature residues Length and Checksum";
   $items[] = "Generate QTL Abbreviations";
   $items[] = "Make marker_locus match genetic_marker";
+  $items[] = "Generate biomaterial_analysis links";
   $items[] = "Generate stock_analysis links";
   $items[] = "Generate map properties";
   $items[] = "Assign organisms to phylonodes";
