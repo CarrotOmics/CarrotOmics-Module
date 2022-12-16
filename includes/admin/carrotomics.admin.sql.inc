@@ -147,6 +147,19 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Transfer from featuremap_stock to stock_featuremap' button
+  $form['featuremap_stock_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'featuremap_stock_btn',
+    '#value'  => 'Transfer from featuremap_stock to stock_featuremap',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Move linker records from the mainlab tripal table"
+                 . " chado.featuremap_stock to the core tripal table"
+                 . " chado.stock_featuremap"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   return $form;
 }
 
@@ -202,6 +215,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'phylo_organism_btn') {
     [$nerrors, $status] = carrotomics_admin_phylotree_organism();
+  }
+  else if ($triggering_element == 'featuremap_stock_btn') {
+    [$nerrors, $status] = carrotomics_admin_featuremap_stock();
   }
   else {
     [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -775,7 +791,7 @@ function carrotomics_admin_generate_featuremapprop() {
         $args4 = [':featuremap_id' => $featuremap_id, ':type_id' => $linkage_group_count_id,
                   ':value' => $linkage_group_count, ':rank' => 0];
         try {
-          $results4 = chado_query($sql4, $args4);
+          $results4 = chado_query($sql4, $args3);
         } catch (Exception $e) {
           return [1, $e->getMessage()];
         }
@@ -880,6 +896,81 @@ function carrotomics_admin_phylotree_organism() {
 
   $status = t('Added @nadded organism links, @nfailed unable to determine organism, @nerrors errors',
               ['@nadded' => $nadded, '@nfailed' => $nfailed, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Move linker records from the mainlab tripal table chado.featuremap_stock
+ * to the core tripal table chado.stock_featuremap
+ *
+ */
+function carrotomics_admin_featuremap_stock() {
+  $errors = '';
+  $nerrors = 0;
+  $nexisting = 0;
+  $nadded = 0;
+  $nremoved = 0;
+
+  // get count of existing links
+  $sql1 = "SELECT COUNT(*) FROM {stock_featuremap}";
+  $args1 = [];
+  $nexisting = chado_query($sql1, $args1)->fetchField();
+
+  // parse each link in the mainlab tripal featuremap_stock table
+  // The schema does not seem to exist, so need chado. prefix
+  $sql2 = "SELECT FS.featuremap_stock_id, FS.featuremap_id AS fs_featuremap_id, FS.stock_id AS fs_stock_id,"
+        .   " S.type_id,"
+        .   " SF.stock_featuremap_id, SF.featuremap_id AS sf_featuremap_id, SF.stock_id AS sf_stock_id, SF.type_id AS sf_type_id"
+        . " FROM chado.featuremap_stock FS"
+        . " LEFT JOIN {stock} S ON FS.stock_id=S.stock_id"
+        . " LEFT JOIN {stock_featuremap} SF ON"
+        .   " FS.featuremap_id=SF.featuremap_id AND FS.stock_id=SF.stock_id";
+  $args2 = [];
+  $records = chado_query($sql2, $args2);
+  if ($records) {
+    while ($record = $records->fetchObject()) {
+
+      // Does not exist in stock_featuremap, add it
+      if (!$record->stock_featuremap_id) {
+        $sql3 = "INSERT INTO {stock_featuremap}"
+              . " (featuremap_id, stock_id, type_id)"
+              . " VALUES (:featuremap_id, :stock_id, :type_id)";
+        $args3 = [':featuremap_id' => $record->fs_featuremap_id,
+                  ':stock_id' => $record->fs_stock_id,
+                  ':type_id' => $record->type_id];
+        try {
+          $result3 = chado_query($sql3, $args3);
+        } catch (Exception $e) {
+          $nerrors++;
+          $errors .= $e->getMessage();
+        }
+        $nadded++;
+      }
+
+      // If no problems, delete it from featuremap_stock.
+      if (!$nerrors) {
+        $sql4 = "DELETE FROM chado.featuremap_stock"
+              . " WHERE featuremap_stock_id = :featuremap_stock_id";
+        $args4 = [':featuremap_stock_id' => $record->featuremap_stock_id];
+        try {
+          $result4 = chado_query($sql4, $args4);
+        } catch (Exception $e) {
+          $nerrors++;
+          $errors .= $e->getMessage();
+        }
+        $nremoved++;
+      }
+    }
+  }
+
+  $status = t('Found @nexisting existing links in core tripal stock_featuremap,'
+              . ' added @nadded links to stock_featuremap,'
+              . ' removed @nremoved links from mainlab tripal featuremap_stock,'
+              . ' @nerrors errors',
+              ['@nexisting' => $nexisting,
+               '@nadded' => $nadded,
+               '@nremoved' => $nremoved,
+               '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
 }
 
