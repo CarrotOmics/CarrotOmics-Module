@@ -70,48 +70,6 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
-
-    $field_name = 'local__stock_analysis';
-    $field_type = 'local__stock_analysis';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one stock can link to multiple analyses
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-
-    $field_name = 'local__stock_project';
-    $field_type = 'local__stock_project';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-  }
-
-  // for biomaterial entity
-  if ($term_accession == 'sep__00195') {
-    $field_name = 'local__biomaterial_project';
-    $field_type = 'local__biomaterial_project';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
   }
 
   // for analysis entity
@@ -132,71 +90,12 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
-
-    $field_name = 'local__analysis_project';
-    $field_type = 'local__analysis_project';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-  }
-
-  // for assay entity
-  if ($term_accession == 'OBI__0000070') {
-    $field_name = 'local__analysis_project';
-    $field_type = 'local__analysis_project';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
   }
 
   // for organism entity
   if ($term_accession == 'OBI__0100026') {
     $field_name = 'edam__accession';
     $field_type = 'edam__accession';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-  }
-
-  // for project entity
-  if ( ($term_accession == 'NCIT__C47885')
-    or ($term_accession == 'local__Genome Project') ) {
-    $field_name = 'local__project_analysis';
-    $field_type = 'local__project_analysis';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-
-    $field_name = 'local__project_stock';
-    $field_type = 'local__project_stock';
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -235,36 +134,6 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
   if ($term_accession == 'SIO__000396') {
     $field_name = 'obi__organism_linker';
     $field_type = 'obi__organism_linker';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-  }
-
-  // this was a conversion of the obi__organism_linker field from tripal_manage_analyses
-  // module into a linker to stock, such as a population linked to a genetic map
-  if ($term_accession == 'data__1278') { // featuremap
-    $field_name = 'main__stock_linker';
-    $field_type = 'main__stock_linker';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one map can link to multiple populations, i.e. merged maps
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-
-    $field_name = 'local__analysis_project';
-    $field_type = 'local__analysis_project';
     $info[$field_name] = [
       'field_name' => $field_name,
       'type' => $field_type,
@@ -397,110 +266,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
         ],
       ],
     ];
-
-    $field_name = 'local__stock_analysis';
-    $field_type = 'local__stock_analysis';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Analysis',
-      'description' => 'Related analyses',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => 'stock_analysis',
-        'chado_column' => 'stock_id',
-        'base_table' => $bundle->data_table,
-        'term_name' => 'stock_analysis',
-        'term_accession' => 'stock_analysis',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__stock_analysis_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__stock_analysis_formatter',
-          'settings' => [
-            'title' => 'Analysis',
-            'empty' => 'This stock is not used by any analysis',
-          ],
-        ],
-      ],
-    ];
-
-    $field_name = 'local__stock_project';
-    $field_type = 'local__stock_project';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Related Projects',
-      'description' => 'Projects related to this stock',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
-        'base_table' => $bundle->data_table,
-        'term_name' => 'local:stock_project',
-        'term_accession' => 'stock_project',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__stock_project_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__stock_project_formatter',
-          'settings' => [
-            'title' => 'TODO8369',  // Table Header
-            'empty' => 'TODO8370',  // Empty text
-          ],
-        ],
-      ],
-    ];
-  }
-
-  if ($bundle->data_table == 'biomaterial') {
-    $field_name = 'local__biomaterial_project';
-    $field_type = 'local__biomaterial_project';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Projects and Analyses',
-      'description' => 'Projects and analyses utilizing this biomaterial',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => 'project', // $bundle->data_table,
-        'chado_column' => 'project_id',
-        'base_table' => 'project', // $bundle->data_table,
-        'term_name' => 'biomaterial_project',
-        'term_accession' => 'biomaterial_project',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__biomaterial_project_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__biomaterial_project_formatter',
-          'settings' => [
-            'title' => 'Projects and Analyses',
-            'empty' => 'There are no projects or analyses utilizing this biomaterial',
-          ],
-        ],
-      ],
-    ];
   }
 
   if ($bundle->data_table == 'analysis') {
@@ -533,44 +298,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
           'settings' => [
             'title' => 'Phylogenetic tree',
             'empty' => 'There are no phylogenetic trees for this analysis',
-          ],
-        ],
-      ],
-    ];
-  }
-
-  if ( ($bundle->data_table == 'analysis')
-    or ($bundle->data_table == 'assay')
-    or ($bundle->data_table == 'featuremap') ) {
-    $field_name = 'local__analysis_project';
-    $field_type = 'local__analysis_project';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Related Projects',
-      'description' => 'Projects related to this analysis',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,  // analysis||assay
-        'chado_column' => $bundle->data_table . '_id', // analysis_id||assay_id
-        'base_table' => $bundle->data_table,  // analysis||assay
-        'term_name' => 'local:analysis_project',
-        'term_accession' => 'analysis_project',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__analysis_project_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__analysis_project_formatter',
-          'settings' => [
-            'title' => 'TODO8465',  // Table Header
-            'empty' => 'TODO8466',  // Empty text
           ],
         ],
       ],
@@ -652,77 +379,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
 
   }
 
-  if ($bundle->data_table == 'project') {
-    $field_name = 'local__project_analysis';
-    $field_type = 'local__project_analysis';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Related Analyses',
-      'description' => 'Analyses related to this project',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
-        'base_table' => $bundle->data_table,
-        'term_name' => 'local:project_analysis',
-        'term_accession' => 'project_analysis',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__project_analysis_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__project_analysis_formatter',
-          'settings' => [
-            'title' => 'TODO8365',  // Table Header
-            'empty' => 'TODO8366',  // Empty text
-          ],
-        ],
-      ],
-    ];
-
-    $field_name = 'local__project_stock';
-    $field_type = 'local__project_stock';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Related Stocks',
-      'description' => 'Stocks related to this project',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => $bundle->data_table,
-        'chado_column' => 'project_id',
-        'base_table' => $bundle->data_table,
-        'term_name' => 'local:project_stock',
-        'term_accession' => 'project_stock',
-        'term_vocabulary' => 'local',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'local__project_stock_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'local__project_stock_formatter',
-          'settings' => [
-            'title' => 'TODO8367',  // Table Header
-            'empty' => 'TODO8368',  // Empty text
-          ],
-        ],
-      ],
-    ];
-
-  }
-
   // obi__organism_linker field from tripal_manage_analyses module,
   // to be used on a file entity from the tripal_file module
   if ($bundle->data_table == 'file') {
@@ -752,41 +408,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
         'default' => [
           'label' => 'inline',
           'type' => 'obi__organism_linker_formatter',
-          'settings' => [],
-        ],
-      ],
-    ];
-  }
-
-  // this was a conversion of the obi__organism_linker field from tripal_manage_analyses
-  // module into a linker to stock, such as a population linked to a genetic map
-  if ($bundle->data_table == 'featuremap') {
-    $field_name = 'main__stock_linker';
-    $field_type = 'main__stock_linker';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Stock',
-      'description' => 'Stock associated with this ' . $bundle->data_table,
-      'required' => FALSE,
-      'settings' => [
-        'term_vocabulary' => 'MAIN',
-        'term_name' => 'stock',
-        'term_accession' => 'stock',
-        'auto_attach' => FALSE,
-        'chado_table' => 'stock_featuremap',
-        'chado_column' => 'stock_id',
-        'base_table' => $bundle->data_table,
-      ],
-      'widget' => [
-        'type' => 'main__stock_linker_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'main__stock_linker_formatter',
           'settings' => [],
         ],
       ],
