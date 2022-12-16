@@ -569,37 +569,47 @@ function carrotomics_admin_genetic_marker_marker_locus_fix() {
  *
  */
 function carrotomics_admin_biomaterial_analysis_linker() {
+  $nexisting = 0;
   $nadded = 0;
   $nerrors = 0;
   $errors = '';
 
+  // get count of existing links
+  $sql1 = "SELECT COUNT(*) FROM {biomaterial_analysis}";
+  $args1 = [];
+  $nexisting = chado_query($sql1, $args1)->fetchField();
+
   // find all projects linked to biomaterial
-  $sql1 = "SELECT DISTINCT BP.biomaterial_id, PA.analysis_id"
+  $sql2 = "SELECT DISTINCT BP.biomaterial_id, PA.analysis_id"
         . " FROM {biomaterial_project} BP"
         . " LEFT JOIN {project_analysis} PA ON BP.project_id=PA.project_id"
         . " LEFT JOIN {biomaterial_analysis} BA ON BP.biomaterial_id=BA.biomaterial_id"
         . "   AND PA.analysis_id=BA.analysis_id"
         . " WHERE BA.biomaterial_analysis_id IS NULL";
-  $args1 = [];
-  $records = chado_query($sql1, $args1);
+  $args2 = [];
+  $records = chado_query($sql2, $args2);
   if ($records) {
     while ($record = $records->fetchObject()) {
       $biomaterial_id = $record->biomaterial_id;
       $analysis_id = $record->analysis_id;
       // If project does not have any analyses, analysis_id will be null.
       if ($biomaterial_id and $analysis_id) {
-        $sql2 = "INSERT INTO {biomaterial_analysis} (biomaterial_id, analysis_id)"
+        $sql3 = "INSERT INTO {biomaterial_analysis} (biomaterial_id, analysis_id)"
               . " VALUES (:biomaterial_id, :analysis_id)";
-        $args2 = [':biomaterial_id' => $biomaterial_id,
+        $args3 = [':biomaterial_id' => $biomaterial_id,
                   ':analysis_id' => $analysis_id];
-        $result = chado_query($sql2, $args2);
+        try {
+          $result = chado_query($sql3, $args3);
+        } catch (Exception $e) {
+          return [1, $e->getMessage()];
+        }
         $nadded++;
       }
     }
   }
 
-  $status = t('Added @nadded links, @nerrors errors',
-              ['@nadded' => $nadded, '@nerrors' => $nerrors]);
+  $status = t('Found @nexisting existing links, added @nadded links, @nerrors errors',
+              ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
 }
 
