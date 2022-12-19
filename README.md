@@ -47,13 +47,3 @@ This Tripal Field is a replacement for the `data__sequence_coordinates` field,
 the only difference is that it will include a link to JBrowse.
 
 ![data__jbrowse_coordinates example image](/docs/data__jbrowse_coordinates_example.jpg?raw=true "Example image of data__jbrowse_coordinates tripal field")
-
-edam__genetic_map
------------------
-
-This field provides the inverse of the `main__stock_linker` field, it provides a link to
-a Tripal Map (featuremap) page from a stock page. The current implementation supports a
-link from a population page to a map using that population. This field uses the
-`chado.featuremap_stock` table to obtain the link information.
-
-![edam__genetic_map example image](/docs/edam__genetic_map_example.jpg?raw=true "Example image of edam__genetic_map tripal field")

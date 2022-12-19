@@ -57,19 +57,6 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
       ],
       'settings' => [],
     ];
-
-    $field_name = 'edam__genetic_map';
-    $field_type = 'edam__genetic_map';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,  // one population can link to multiple maps
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
   }
 
   // for analysis entity
@@ -228,40 +215,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
           'settings' => [
             'title' => 'Images',
             'empty' => 'There are no images for this accession',
-          ],
-        ],
-      ],
-    ];
-
-    $field_name = 'edam__genetic_map';
-    $field_type = 'edam__genetic_map';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Map',
-      'description' => 'Genetic or Physical map of a genome',
-      'required' => FALSE,
-      'settings' => [
-        'auto_attach' => TRUE,
-        'chado_table' => 'stock_featuremap',
-        'chado_column' => 'stock_id',
-        'base_table' => $bundle->data_table,
-        'term_name' => 'Genetic Map',
-        'term_accession' => '1278',
-        'term_vocabulary' => 'data',  // database name, not CV name
-      ],
-      'widget' => [
-        'type' => 'edam__genetic_map_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'edam__genetic_map_formatter',
-          'settings' => [
-            'title' => 'Maps',
-            'empty' => 'This stock is not present in any genetic or physical maps',
           ],
         ],
       ],
