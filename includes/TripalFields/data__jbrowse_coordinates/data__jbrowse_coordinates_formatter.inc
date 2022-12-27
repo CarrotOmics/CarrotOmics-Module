@@ -42,14 +42,14 @@ class data__jbrowse_coordinates_formatter extends ChadoFieldFormatter {
         // set if present in JBrowse, see notebook page 78 July 11, 2020
         $sql = "SELECT urlprefix from {db} WHERE db_id=(
           SELECT db_id FROM {dbxref} WHERE dbxref_id=(
-            SELECT dbxref_id from {feature} WHERE type_id=(
-              SELECT cvterm_id FROM {cvterm} WHERE name=:chromosome AND cv_id=(
+            SELECT dbxref_id from {feature} WHERE type_id IN (
+              SELECT cvterm_id FROM {cvterm} WHERE name IN (:cvterm_name) AND cv_id=(
                 SELECT cv_id FROM {cv} WHERE name=:sequence
               )
             ) AND uniquename=:uniquename
           )
         )";
-        $results = chado_query($sql, [':chromosome' => 'chromosome',
+        $results = chado_query($sql, [':cvterm_name' => ['DNA', 'chromosome', 'supercontig', 'contig'],
                                       ':sequence' => 'sequence',
                                       ':uniquename' => $srcfeature]);
         if ($results) {
