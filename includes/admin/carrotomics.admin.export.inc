@@ -105,6 +105,25 @@ function carrotomics_admin_export_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Generate a list of all projects, analyses, and assays' button
+  $paa_list_filename = 'public://mcl/user/'.$user->name.'/paa_list.tsv';
+  $paa_list_url = file_create_url($paa_list_filename);
+  $form['paa_list_filename'] = [
+    '#type' => 'hidden',
+    '#value' => $paa_list_filename,
+  ];
+  $form['paa_list_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'paa_list_btn',
+    '#value'  => 'Generate a list of all projects, analyses, and assays',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate a tsv file of all projects, analyses, and assays"
+                 . " currently in CarrotOmics"
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$paa_list_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
   // Add a 'Generate a list of all GRIN stocks and linked projects' button
   $grin_stock_filename = 'public://mcl/user/'.$user->name.'/grin_stock.tsv';
   $grin_stock_url = file_create_url($grin_stock_filename);
@@ -184,6 +203,10 @@ function carrotomics_admin_export_form_submit($form, &$form_state) {
     $organism_list_filename = $form_state['values']['organism_list_filename'];
     [$nerrors, $status] = carrotomics_admin_organism_list($organism_list_filename);
   }
+  else if ($triggering_element == 'paa_list_btn') {
+    $paa_list_filename = $form_state['values']['paa_list_filename'];
+    [$nerrors, $status] = carrotomics_admin_paa_list($paa_list_filename);
+  }
   else if ($triggering_element == 'grin_stock_btn') {
     $grin_stock_filename = $form_state['values']['grin_stock_filename'];
     [$nerrors, $status] = carrotomics_admin_grin_stock($grin_stock_filename);
@@ -218,8 +241,8 @@ function carrotomics_admin_gbs_location() {
 
   $sql = "SELECT F.feature_id, F.name FROM {feature} F LEFT JOIN {featureloc} L"
        . " ON F.feature_id=L.feature_id WHERE F.name ~ '^MK\d+ \d_\d+$' AND L.featureloc_id IS NULL"
-       . " AND F.type_id=(SELECT cvterm_id FROM cvterm C WHERE C.name='genetic_marker'"
-       . " AND C.cv_id=(SELECT cv_id FROM cv WHERE name='sequence'))"
+       . " AND F.type_id=(SELECT cvterm_id FROM {cvterm} C WHERE C.name='genetic_marker'"
+       . " AND C.cv_id=(SELECT cv_id FROM {cv} WHERE name='sequence'))"
        . " ORDER BY F.name";
   $args = [];
   try {
@@ -432,7 +455,7 @@ function carrotomics_admin_marker_gff3($jbrowse_analysis, $marker_gff3_filename)
 }
 
 /**
- * Get a list of organisms currently in carrotomics
+ * Get a list of organisms currently in CarrotOmics
  *
  */
 function carrotomics_admin_organism_list($organism_list_filename) {
@@ -471,7 +494,7 @@ function carrotomics_admin_organism_list($organism_list_filename) {
     $content .= implode("\t", $cols) . "\n";
     $nfound++;
   }
-  // save file in mcl directory. Save even if nothing retrieved, to overwrite old versions
+  // save file in mcl directory.
   file_put_contents($organism_list_filename, $content);
 
   if ( $nfound ) {
@@ -479,6 +502,63 @@ function carrotomics_admin_organism_list($organism_list_filename) {
   }
   else {
     return [1, "There are no organisms, this should not happen"];
+  }
+}
+
+/**
+ * Get a list of projects, analyses, and assays currently in CarrotOmics
+ *
+ */
+function carrotomics_admin_paa_list($paa_list_filename) {
+  $nfound = 0;
+
+  // Combine all tables that in the general category of "analysis" into one master list.
+  $sql = "SELECT 'project' AS table, PR.project_id AS record_id, PP1.value AS type, PR.name,"
+       . " CASE WHEN PR.description = '' OR PR.description IS NULL THEN PP2.value ELSE PR.description END AS description"
+       . " FROM {project} PR"
+       . " LEFT JOIN {projectprop} PP1 ON PR.project_id=PP1.project_id"
+       . "  AND PP1.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='project_type' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='MAIN'))"
+       . " LEFT JOIN {projectprop} PP2 ON PR.project_id=PP2.project_id"
+       . "  AND PP2.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='description' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='MAIN'))"
+       . " UNION ALL "
+       . "SELECT 'analysis' AS table, AN.analysis_id AS record_id, ANP.value AS type, AN.name, AN.description"
+       . " FROM {analysis} AN"
+       . " LEFT JOIN {analysisprop} ANP ON AN.analysis_id=ANP.analysis_id"
+       . "  AND ANP.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='type' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='rdfs'))"
+       . " UNION ALL "
+       . "SELECT 'assay' AS table, AY.assay_id AS record_id, AYP.value AS type, AY.name, AY.description"
+       . " FROM {assay} AY"
+       . " LEFT JOIN {assayprop} AYP ON AY.assay_id=AYP.assay_id"
+       . "  AND AYP.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='type' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='rdfs'))"
+       . " UNION ALL "
+       . "SELECT 'study' AS table, ST.study_id AS record_id, STP.value AS type, ST.name, ST.description"
+       . " FROM {study} ST"
+       . " LEFT JOIN {studyprop} STP ON ST.study_id=STP.study_id"
+       . "  AND STP.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='type' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='rdfs'))"
+       . " ORDER BY name";
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $content = implode("\t", ['table', 'record_id', 'type', 'name', 'description']) . "\n";
+  while ($obj = $results->fetchObject()) {
+    // In case there are any line breaks, remove them.
+    $name = preg_replace('/[\n\r]+/', ' ', $obj->name);
+    $description = preg_replace('/[\n\r]+/', ' ', $obj->description);
+    $cols = [ $obj->table, $obj->record_id, $obj->type, $name, $description];
+    $content .= implode("\t", $cols) . "\n";
+    $nfound++;
+  }
+  // save file in mcl directory.
+  file_put_contents($paa_list_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound records saved, download them from the link below the button"];
+  }
+  else {
+    return [1, "There are no records, this should not happen"];
   }
 }
 
