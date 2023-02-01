@@ -143,6 +143,25 @@ function carrotomics_admin_export_form($form, &$form_state) {
                  . "<hr>",
   ];
 
+  // Add a 'Generate a list of all biomaterials and linked projects and analyses' button
+  $biomaterial_filename = 'public://mcl/user/'.$user->name.'/biomaterial.tsv';
+  $biomaterial_url = file_create_url($biomaterial_filename);
+  $form['biomaterial_filename'] = [
+    '#type' => 'hidden',
+    '#value' => $biomaterial_filename,
+  ];
+  $form['biomaterial_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'biomaterial_btn',
+    '#value'  => 'Generate a list of all biomaterials and linked projects and analyses',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate a tsv file of all biomaterials currently in CarrotOmics,"
+                 . " and any linked projects or analyses"
+                 . "</em></div><br />",
+    '#suffix' => "<div>Download the generated list from <a href=\"".$biomaterial_url."\">here</a></div><br />"
+                 . "<hr>",
+  ];
+
   // Add a 'Generate a list of all images of stocks' button
   $stock_image_filename = 'public://mcl/user/'.$user->name.'/stock_image.tsv';
   $stock_image_url = file_create_url($stock_image_filename);
@@ -210,6 +229,10 @@ function carrotomics_admin_export_form_submit($form, &$form_state) {
   else if ($triggering_element == 'grin_stock_btn') {
     $grin_stock_filename = $form_state['values']['grin_stock_filename'];
     [$nerrors, $status] = carrotomics_admin_grin_stock($grin_stock_filename);
+  }
+  else if ($triggering_element == 'biomaterial_btn') {
+    $biomaterial_filename = $form_state['values']['biomaterial_filename'];
+    [$nerrors, $status] = carrotomics_admin_biomaterial($biomaterial_filename);
   }
   else if ($triggering_element == 'stock_image_btn') {
     $stock_image_filename = $form_state['values']['stock_image_filename'];
@@ -597,6 +620,45 @@ function carrotomics_admin_grin_stock($grin_stock_filename) {
   }
   else {
     return [1, "There are no GRIN accessions, this should not happen"];
+  }
+}
+
+/**
+ * Get a list of biomaterials (BioSamples) and linked projects, etc.
+ *
+ */
+function carrotomics_admin_biomaterial($biomaterial_filename) {
+  $nfound = 0;
+
+  $sql = "SELECT B.name AS biomaterialname, P.name AS projectname, A.name AS analysisname,"
+       . " S.name AS assayname FROM {biomaterial} B"
+       . " LEFT JOIN {biomaterial_project} BP ON B.biomaterial_id=BP.biomaterial_id"
+       . " LEFT JOIN {biomaterial_analysis} BA ON B.biomaterial_id=BA.biomaterial_id"
+       . " LEFT JOIN {assay_biomaterial} BS ON B.biomaterial_id=BS.biomaterial_id"
+       . " LEFT JOIN {project} P ON BP.project_id=P.project_id"
+       . " LEFT JOIN {analysis} A ON BA.analysis_id=A.analysis_id"
+       . " LEFT JOIN {assay} S ON BS.assay_id=S.assay_id"
+       . " ORDER BY B.name";
+  $args = [];
+  try {
+    $results = chado_query($sql, $args);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $content = implode("\t", ['biomaterialname', 'projectname', 'analysisname', 'assayname']) . "\n";
+  while ($obj = $results->fetchObject()) {
+    $cols = [$obj->biomaterialname, $obj->projectname, $obj->analysisname, $obj->assayname];
+    $content .= implode("\t", $cols) . "\n";
+    $nfound++;
+  }
+  // save file in mcl directory
+  file_put_contents($biomaterial_filename, $content);
+
+  if ( $nfound ) {
+    return [0, "$nfound records saved, download them from the link below the button"];
+  }
+  else {
+    return [1, "There are no biomaterials, this should not happen"];
   }
 }
 
