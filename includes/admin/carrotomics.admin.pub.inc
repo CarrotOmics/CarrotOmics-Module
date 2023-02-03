@@ -1,4 +1,9 @@
 <?php
+
+// Include function tripal_pub_get_publication_array()
+$tripal_chado_module_path = DRUPAL_ROOT . '/' . drupal_get_path('module', 'tripal_chado');
+require_once($tripal_chado_module_path . '/includes/loaders/tripal_chado.pub_importers.inc');
+
 /**
  * Custom functions for the CarrotOmics site
  *
@@ -47,7 +52,8 @@ function carrotomics_admin_pub_form($form, &$form_state) {
                  . " \"Unique Local Identifier\" in the widget. These values are not displayed"
                  . " to the end user. The publication loaders generate this to be the publication"
                  . " citation, which is long, and it is not used on CarrotOmics."
-                 . " Replace these with the pub_id value."
+                 . " Replace these with the pub_id value. Additionally, placeholder citations"
+                 . " consisting of a single character are expanded using chado_pub_create_citation()"
                  . "</em></div><br />",
     '#suffix' => "<hr>",
   ];
@@ -106,33 +112,6 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
-  // Add a 'Find Duplicate Publications' button and optional minimum value for pub_id
-  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
-  $merge_pub_url = file_create_url($merge_pub_filename);
-  $form['merge_pub_min_pub_id'] = [
-    '#type'     => 'textfield',
-    '#name'     => 'merge_pub_min_pub_id',
-    '#title'    => 'Optional minimum pub_id value',
-    '#required' => FALSE,
-    '#prefix'   => '<div style="padding-top:30px;"><em>'
-                 . 'Loading publications from both Pubmed and National Ag Library can'
-                 . ' result in duplicate instances of the same publication. This button will'
-                 . ' generate a list of candidates that can be merged with the Mainlab Chado'
-                 . ' Loader </em>merge_pub<em> template. Candidate duplications are found with a'
-                 . ' combination of DOI and Title comparisons. The first column will'
-                 . ' be the publication to be kept, the second column is the publication'
-                 . ' that will be deleted. Several additional columns are included for'
-                 . ' manual examination.'
-                 . '</em></div><br />',
-  ];
-  $form['merge_pub_btn'] = [
-    '#type'   => 'submit',
-    '#name'   => 'merge_pub_btn',
-    '#value'  => 'Find Duplicate Publications',
-    '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
-                 . "<hr>",
-  ];
-
   // Add a 'Find Unlinked Errata' button
   $form['unlinked_pub_btn'] = [
     '#type'   => 'submit',
@@ -157,6 +136,34 @@ function carrotomics_admin_pub_form($form, &$form_state) {
                  . ' is either NULL or is an empty string'
                  . '</em></div><br />',
     '#suffix' => "<hr>",
+  ];
+
+  // Add a 'Find Duplicate Publications' button and optional minimum value for pub_id
+  $merge_pub_filename = 'public://mcl/user/'.$user->name.'/merge_pub.tsv';
+  $merge_pub_url = file_create_url($merge_pub_filename);
+  $form['merge_pub_min_pub_id'] = [
+    '#type'     => 'textfield',
+    '#name'     => 'merge_pub_min_pub_id',
+    '#title'    => 'Optional minimum pub_id value',
+    '#required' => FALSE,
+    '#prefix'   => '<div style="padding-top:30px;"><em>'
+                 . 'Loading publications from both Pubmed and National Ag Library can'
+                 . ' result in duplicate instances of the same publication. This button will'
+                 . ' generate a list of candidates that can be merged with the Mainlab Chado'
+                 . ' Loader </em>merge_pub<em> template. Candidate duplications are found with a'
+                 . ' combination of DOI and Title comparisons. The first column will'
+                 . ' be the publication to be kept, the second column is the publication'
+                 . ' that will be deleted. Several additional columns are included for'
+                 . ' manual examination.'
+                 . '</em></div><br />',
+  ];
+  $form['merge_pub_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'merge_pub_btn',
+    '#value'  => 'Find Duplicate Publications',
+    '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
+                 . "Remember to name the Excel tab \"merge_pub\"><br />"
+                 . "<hr>",
   ];
 
   return $form;
@@ -951,17 +958,20 @@ function carrotomics_admin_unlinked_pub() {
 function carrotomics_admin_pub_uli() {
   $errors = '';
 
+  [$error, $citation_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Citation');
+  if ($error ){ return[$error, $citation_id]; }
+
   // Find the publications needing to be updated, but leave the special null pub alone
-  $sql = "SELECT pub_id, uniquename FROM {pub} P"
+  $sql1 = "SELECT pub_id, uniquename FROM {pub} P"
        . " WHERE NOT pub_id::text=uniquename"
        . " AND NOT uniquename='null'";  
-  $args = [];
-  $results = chado_query($sql, $args);
+  $args1 = [];
+  $results1 = chado_query($sql1, $args1);
 
   // Loop and make changes, keeping track of the number of changes made
   $nchanged = 0;
   $nerrors = 0;
-  while ($obj = $results->fetchObject()) {
+  while ($obj = $results1->fetchObject()) {
     $pub_id = $obj->pub_id;
     $uniquename = $obj->uniquename;
     $where = [ 'pub_id' => $pub_id ];
@@ -980,8 +990,47 @@ function carrotomics_admin_pub_uli() {
     }
   }
 
-  if ($nchanged or $nerrors) {
-    $status = t('Changed @nchanged uniquename values, @nerrors errors', ['@nchanged' => $nchanged, '@nerrors' => $nerrors]);
+  // Check for single-character or null citations
+  $sql2 = "SELECT P.pub_id, PP.pubprop_id FROM {pub} P LEFT JOIN {pubprop} PP ON P.pub_id=PP.pub_id"
+       . " WHERE PP.type_id=:citation_id"
+       . " AND LENGTH(PP.value) <= 1";
+  $args2 = [':citation_id' => $citation_id];
+  $results2 = chado_query($sql2, $args2);
+
+  // Loop and make changes, keeping track of the number of changes made
+  $ncited = 0;
+  while ($obj = $results2->fetchObject()) {
+    $pub_id = $obj->pub_id;
+    $pubprop_id = $obj->pubprop_id;
+    $pub_arr = tripal_pub_get_publication_array($pub_id, FALSE);
+    if ($pub_arr) {
+      $citation = chado_pub_create_citation($pub_arr);
+      if ($citation) {
+        $sql3 = "UPDATE {pubprop} SET value = :citation"
+            . " WHERE pubprop_id=:pubprop_id";
+        $args3 = [':citation' => $citation, ':pubprop_id' => $pubprop_id];
+        try {
+          $results3 = chado_query($sql3, $args3);
+          $ncited++;
+        } catch (Exception $e) {
+          $nerrors++;
+          $errors = '<br>' . $e->getMessage();
+        }
+      }
+      else {
+        $errors .= "No citation generated for pub_id $pub_id. ";
+        $nerrors++;
+      }
+    }
+    else {
+      $errors .= "No pub_arr for pub_id $pub_id. ";
+      $nerrors++;
+    }
+  }
+
+  if ($nchanged or $ncited or $nerrors) {
+    $status = t('Changed @nchanged uniquename values, updated @ncited citations, @nerrors errors',
+      ['@nchanged' => $nchanged, '@ncited' => $ncited, '@nerrors' => $nerrors]);
   }
   else {
     $status = t('No changes were needed');
