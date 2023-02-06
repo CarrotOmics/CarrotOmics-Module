@@ -3,7 +3,7 @@ CarrotOmics-Module
 
 This is a custom Tripal module used on the CarrotOmics.org site.
 
-It is module specific to CarrotOmics, and not intended as a general use module, but you are free to borrow parts for your own site.
+This module is specific to CarrotOmics, and not intended as a general use module, but you are free to borrow parts for your own site.
 
 Custom Tripal Fields in this module are:
 
