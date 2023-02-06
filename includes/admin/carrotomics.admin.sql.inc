@@ -108,6 +108,18 @@ function carrotomics_admin_sql_form($form, &$form_state) {
     '#suffix' => "<hr>",
   ];
 
+  // Add a 'Generate biomaterial_stock links' button
+  $form['biomaterial_stock_btn'] = [
+    '#type'   => 'submit',
+    '#name'   => 'biomaterial_stock_btn',
+    '#value'  => 'Generate biomaterial_stock links',
+    '#prefix' => '<div style="padding-top:30px;"><em>'
+                 . "Generate links in the chado.biomaterial_stock custom table"
+                 . " when the stock is present in the biomaterial description"
+                 . "</em></div><br />",
+    '#suffix' => "<hr>",
+  ];
+
   // Add a 'Generate stock_analysis links' button
   $form['stock_analysis_btn'] = [
     '#type'   => 'submit',
@@ -206,6 +218,9 @@ function carrotomics_admin_sql_form_submit($form, &$form_state) {
   }
   else if ($triggering_element == 'biomaterial_analysis_btn') {
     [$nerrors, $status] = carrotomics_admin_biomaterial_analysis_linker();
+  }
+  else if ($triggering_element == 'biomaterial_stock_btn') {
+    [$nerrors, $status] = carrotomics_admin_biomaterial_stock_linker();
   }
   else if ($triggering_element == 'stock_analysis_btn') {
     [$nerrors, $status] = carrotomics_admin_stock_analysis_linker();
@@ -620,6 +635,83 @@ function carrotomics_admin_biomaterial_analysis_linker() {
           return [1, $e->getMessage()];
         }
         $nadded++;
+      }
+    }
+  }
+
+  $status = t('Found @nexisting existing links, added @nadded links, @nerrors errors',
+              ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+  return [$nerrors, $status . $errors];
+}
+
+/**
+ * Generate entries in the chado.biomaterial_stock custom table.
+ * This information is derived from biomaterials that have a link to an
+ * analysis which has the germplasm accession in the biomaterial name, such as:
+ * NCBI accession KX832329; Daucus conchitae voucher PI 652367 plastid, complete genome.
+ *
+ */
+function carrotomics_admin_biomaterial_stock_linker() {
+  $nexisting = 0;
+  $nadded = 0;
+  $nerrors = 0;
+  $errors = '';
+
+  // get cvterm_id for relationship::instance_of (50973)
+  [$error, $instance_of_type_id] = carrotomics_lookup_cvterm_id('relationship', 'instance_of');
+  if ($error ){ return[$error, $instance_of_type_id]; }
+
+  // get count of existing links
+  $sql1 = "SELECT COUNT(*) FROM {biomaterial_stock}";
+  $args1 = [];
+  try {
+    $nexisting = chado_query($sql1, $args1)->fetchField();
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+
+  // find all biomaterials that do not already have a link
+  $sql2 = "SELECT B.biomaterial_id, A.name FROM {biomaterial} B"
+        . " LEFT JOIN {biomaterial_stock} BS ON B.biomaterial_id=BS.biomaterial_id"
+        . " LEFT JOIN {biomaterial_analysis} BA ON B.biomaterial_id=BA.biomaterial_id"
+        . " LEFT JOIN {analysis} A ON BA.analysis_id=A.analysis_id"
+        . " WHERE BS.stock_id IS NULL";
+  $args2 = [];
+  try {
+    $records2 = chado_query($sql2, $args2);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  while ($record2 = $records2->fetchObject()) {
+    $biomaterial_id = $record2->biomaterial_id;
+    $analysis_name = $record2->name;
+    // If no linked analysis, there is nothing to check
+    if ($analysis_name) {
+      // Parse the name for know accession formats
+      $patterns = ['/(PI \d+)/', '/(Ames \d+)/'];
+      foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $analysis_name, $matches)) {
+          $accession = $matches[1];
+          // See if this stock exists
+          $sql3 = "SELECT stock_id FROM {stock} WHERE LOWER(uniquename) = LOWER(:accession)";
+          $args3 = [':accession' => $accession];
+          $stock_id = chado_query($sql3, $args3)->fetchField();
+          if ($stock_id) {
+            // We have a match, and we know there is no existing one because
+            // of the IS NULL in $sql2, so we can insert it.
+            $sql4 = "INSERT INTO {biomaterial_stock} (biomaterial_id, stock_id, type_id)"
+                  . " VALUES (:biomaterial_id, :stock_id, :type_id)";
+            $args4 = [':biomaterial_id' => $biomaterial_id,
+                      ':stock_id' => $stock_id,
+                      ':type_id' => $instance_of_type_id];
+            try {
+              $result = chado_query($sql4, $args4);
+            } catch (Exception $e) {
+              return [1, $e->getMessage()];
+            }
+            $nadded++;
+          }
+        }
       }
     }
   }
