@@ -115,24 +115,6 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     ];
   }
 
-
-  // obi__organism_linker field from tripal_manage_analyses module,
-  // to be used on a file entity from the tripal_file module
-  if ($term_accession == 'SIO__000396') {
-    $field_name = 'obi__organism_linker';
-    $field_type = 'obi__organism_linker';
-    $info[$field_name] = [
-      'field_name' => $field_name,
-      'type' => $field_type,
-      'cardinality' => FIELD_CARDINALITY_UNLIMITED,
-      'locked' => FALSE,
-      'storage' => [
-        'type' => 'field_chado_storage',
-      ],
-      'settings' => [],
-    ];
-  }
-
   return $info;
 }
 
@@ -330,41 +312,6 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
       ],
     ];
 
-  }
-
-  // obi__organism_linker field from tripal_manage_analyses module,
-  // to be used on a file entity from the tripal_file module
-  if ($bundle->data_table == 'file') {
-    $field_name = 'obi__organism_linker';
-    $field_type = 'obi__organism_linker';
-    $instances[$field_name] = [
-      'field_name' => $field_name,
-      'entity_type' => $entity_type,
-      'bundle' => $bundle->name,
-      'label' => 'Organism',
-      'description' => 'Organism associated with this file',
-      'required' => FALSE,
-      'settings' => [
-        'term_vocabulary' => 'OBI',
-        'term_name' => 'organism',
-        'term_accession' => '0100026',
-        'auto_attach' => FALSE,
-        'chado_table' => 'organism_file',
-        'chado_column' => 'file_id',
-        'base_table' => 'file',
-      ],
-      'widget' => [
-        'type' => 'obi__organism_linker_widget',
-        'settings' => [],
-      ],
-      'display' => [
-        'default' => [
-          'label' => 'inline',
-          'type' => 'obi__organism_linker_formatter',
-          'settings' => [],
-        ],
-      ],
-    ];
   }
 
   return $instances;
