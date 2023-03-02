@@ -124,22 +124,22 @@ function carrotomics_admin_export_form($form, &$form_state) {
                  . "<hr>",
   ];
 
-  // Add a 'Generate a list of all GRIN stocks and linked projects' button
-  $grin_stock_filename = 'public://mcl/user/'.$user->name.'/grin_stock.tsv';
-  $grin_stock_url = file_create_url($grin_stock_filename);
-  $form['grin_stock_filename'] = [
+  // Add a 'Generate a list of all stocks and linked projects' button
+  $carrotomics_stock_filename = 'public://mcl/user/'.$user->name.'/carrotomics_stock.tsv';
+  $carrotomics_stock_url = file_create_url($carrotomics_stock_filename);
+  $form['carrotomics_stock_filename'] = [
     '#type' => 'hidden',
-    '#value' => $grin_stock_filename,
+    '#value' => $carrotomics_stock_filename,
   ];
-  $form['grin_stock_btn'] = [
+  $form['carrotomics_stock_btn'] = [
     '#type'   => 'submit',
-    '#name'   => 'grin_stock_btn',
-    '#value'  => 'Generate a list of all GRIN stocks and linked projects',
+    '#name'   => 'carrotomics_stock_btn',
+    '#value'  => 'Generate a list of all stocks and linked projects',
     '#prefix' => '<div style="padding-top:30px;"><em>'
-                 . "Generate a tsv file of all GRIN germplasm accessions (stocks) currently in CarrotOmics,"
+                 . "Generate a tsv file of all germplasm accessions (stocks) currently in CarrotOmics,"
                  . " and any linked projects"
                  . "</em></div><br />",
-    '#suffix' => "<div>Download the generated list from <a href=\"".$grin_stock_url."\">here</a></div><br />"
+    '#suffix' => "<div>Download the generated list from <a href=\"".$carrotomics_stock_url."\">here</a></div><br />"
                  . "<hr>",
   ];
 
@@ -226,9 +226,9 @@ function carrotomics_admin_export_form_submit($form, &$form_state) {
     $paa_list_filename = $form_state['values']['paa_list_filename'];
     [$nerrors, $status] = carrotomics_admin_paa_list($paa_list_filename);
   }
-  else if ($triggering_element == 'grin_stock_btn') {
-    $grin_stock_filename = $form_state['values']['grin_stock_filename'];
-    [$nerrors, $status] = carrotomics_admin_grin_stock($grin_stock_filename);
+  else if ($triggering_element == 'carrotomics_stock_btn') {
+    $carrotomics_stock_filename = $form_state['values']['carrotomics_stock_filename'];
+    [$nerrors, $status] = carrotomics_admin_carrotomics_stock($carrotomics_stock_filename);
   }
   else if ($triggering_element == 'biomaterial_btn') {
     $biomaterial_filename = $form_state['values']['biomaterial_filename'];
@@ -589,37 +589,37 @@ function carrotomics_admin_paa_list($paa_list_filename) {
  * Get a list of GRIN germplasm accessions (stocks) and linked projects
  *
  */
-function carrotomics_admin_grin_stock($grin_stock_filename) {
+function carrotomics_admin_carrotomics_stock($carrotomics_stock_filename) {
   $nfound = 0;
 
-  $sql = "SELECT S.uniquename AS accession, P.name AS project FROM {stock} S"
+  $sql = "SELECT S.stock_id, DB.name as repository, S.uniquename AS accession,"
+       . " P.name AS project FROM {stock} S"
        . " LEFT JOIN {stock_dbxref} X ON S.stock_id=X.stock_id"
        . " LEFT JOIN {dbxref} D ON X.dbxref_id=D.dbxref_id"
        . " LEFT JOIN {db} DB ON D.db_id=DB.db_id"
        . " LEFT JOIN {project_stock} PS ON S.stock_id=PS.stock_id"
        . " LEFT JOIN {project} P ON PS.project_id=P.project_id"
-       . " WHERE DB.name = 'GRIN Accession'"
-       . " ORDER BY S.uniquename, P.name";
+       . " ORDER BY DB.name, S.uniquename, P.name";
   $args = [];
   try {
     $results = chado_query($sql, $args);
   } catch (Exception $e) {
     return [1, $e->getMessage()];
   }
-  $content = implode("\t", ['accession', 'project']) . "\n";
+  $content = implode("\t", ['stock_id', 'repository', 'accession', 'project']) . "\n";
   while ($obj = $results->fetchObject()) {
-    $cols = [$obj->accession, $obj->project];
+    $cols = [$obj->stock_id, $obj->repository, $obj->accession, $obj->project];
     $content .= implode("\t", $cols) . "\n";
     $nfound++;
   }
   // save file in mcl directory
-  file_put_contents($grin_stock_filename, $content);
+  file_put_contents($carrotomics_stock_filename, $content);
 
   if ( $nfound ) {
     return [0, "$nfound records saved, download them from the link below the button"];
   }
   else {
-    return [1, "There are no GRIN accessions, this should not happen"];
+    return [1, "There are no stock accessions, this should not happen"];
   }
 }
 
