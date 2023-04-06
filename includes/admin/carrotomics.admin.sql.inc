@@ -963,11 +963,11 @@ function carrotomics_admin_phylotree_organism() {
   while ($obj = $results->fetchObject()) {
     $phylonode_id = $obj->phylonode_id;
     $label = $obj->label;
-    $organism_id = carrotomics_admin_lookup_organism_by_name($label);
-    if ($organism_id) {
+    $organism_ids = chado_get_organism_id_from_scientific_name($label, []);
+    if ($organism_ids) {
       try {
         $values = ['phylonode_id' => $phylonode_id,
-                   'organism_id' => $organism_id];
+                   'organism_id' => $organism_ids[0]];
         $result = chado_insert_record('phylonode_organism', $values);
         if ($result) {
           $nadded++;
@@ -1064,74 +1064,4 @@ function carrotomics_admin_featuremap_stock() {
                '@nremoved' => $nremoved,
                '@nerrors' => $nerrors]);
   return [$nerrors, $status . $errors];
-}
-
-/**
- * Lookup an organism_id given an organism name (genus species)
- *
- * @param $name
- *   The organism name.
- *
- * @return
- *  organism_id from chado.organism table or FALSE on failure.
- */
-function carrotomics_admin_lookup_organism_by_name($name) {
-  $organism_id = false;
-
-  // spaces in names are likely to be replaced with underscores in newick files
-  $name = trim(preg_replace('/_/', ' ', $name ));
-
-  // TreeBASE trees have a study prefix, remove that if present
-  $name = preg_replace('/^S\d+ /', '', $name);
-
-  // First try to find name as it is in the abbreviation column. This does not
-  // have a unique constraint, so we must verify that the count is 1
-  $sql = "SELECT COUNT(*) FROM {organism} WHERE abbreviation = :name";
-  $args = [':name' => $name];
-  $count = chado_query($sql, $args)->fetchField();
-  if ($count == 1) {
-    $sql = "SELECT organism_id FROM {organism} WHERE abbreviation = :name";
-    $organism_id = $chado_query($sql, $args)->fetchField();
-  }
-
-  // abbreviation query failed, so now query on genus + species and
-  // optionally infraspecific nomenclature
-  else {
-    $infrasupported = false;
-    $limit = 2;
-    if (chado_column_exists('organism', 'infraspecific_name')) {
-      $infrasupported = true;
-      $limit = 4;
-    }
-    $parts = preg_split('/\s+/', $name, $limit);
-    $sql = "SELECT organism_id FROM {organism} WHERE genus = :genus AND species = :species";
-    $args = [ ':genus' => $parts[0], ':species' => $parts[1] ];
-    if ($infrasupported) {
-      // when there is no infraspecific name, we can use the "no_rank" taxonomic term in
-      // the type_id column, or NULL can be considered equivalent. Wrap these in parentheses
-      $sql .= " AND ( type_id = (SELECT cvterm_id FROM {cvterm} WHERE name = :infraspecific_type"
-           . " AND cv_id = (SELECT cv_id FROM {cv} WHERE name = 'taxonomic_rank'))";
-      if (!array_key_exists(2, $parts)) {
-        $parts[2] = 'no_rank';
-        $sql .= " OR type_id IS NULL";
-      }
-      else {
-        $parts[2] = chado_unabbreviate_infraspecific_rank($parts[2]);
-      }
-      $sql .= ")";
-      $parts[3] = array_key_exists(3, $parts) ? $parts[3] : false;
-      $args = array_merge( $args, [':infraspecific_type' => $parts[2]] );
-      // if no infraspecific name, specify empty string or null in the SQL
-      if ($parts[3]) {
-        $sql .= " AND infraspecific_name = :infraspecific_name";
-        $args = array_merge( $args, [':infraspecific_name' => $parts[3]] );
-      }
-      else {
-        $sql .= " AND ( infraspecific_name = '' ) IS NOT FALSE";  // must be either empty string or NULL
-      }
-    }
-    // unique constraint on organism table ensures we get zero or one record returned
-    $organism_id = chado_query($sql, $args)->fetchField();
-  }
-  return($organism_id);
 }
