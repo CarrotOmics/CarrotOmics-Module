@@ -830,6 +830,8 @@ function carrotomics_admin_generate_featuremapprop() {
   // get cvterm_id values for properties to be added
   [$error, $marker_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of markers');
   if ($error ){ return[$error, $marker_count_id]; }
+  [$error, $marker_type_count_id] = carrotomics_lookup_cvterm_id('local', 'Type and Number of Markers');
+  if ($error ){ return[$error, $marker_type_count_id]; }
   [$error, $qtl_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of quantitative trait loci');
   if ($error ){ return[$error, $qtl_count_id]; }
   [$error, $mtl_count_id] = carrotomics_lookup_cvterm_id('local', 'Number of mendelian trait loci');
@@ -852,10 +854,11 @@ function carrotomics_admin_generate_featuremapprop() {
   }
 
   // Retrieve all existing properties.
-  $sql2 = "SELECT P.featuremap_id, P.type_id, P.value FROM {featuremapprop} P"
-        . " WHERE P.type_id IN (:t1, :t2, :t3, :t4)";
+  $sql2 = "SELECT P.featuremap_id, P.type_id, P.value, P.rank FROM {featuremapprop} P"
+        . " WHERE P.type_id IN (:t1, :t2, :t3, :t4, :t5)";
   $args2 = [':t1' => $marker_count_id, ':t2' => $qtl_count_id,
-            ':t3' => $mtl_count_id, ':t4' => $linkage_group_count_id];
+            ':t3' => $mtl_count_id, ':t4' => $linkage_group_count_id,
+            ':t5' => $marker_type_count_id];
   try {
     $results2 = chado_query($sql2, $args2);
   } catch (Exception $e) {
@@ -863,7 +866,7 @@ function carrotomics_admin_generate_featuremapprop() {
   }
   $properties = [];
   while ($obj = $results2->fetchObject()) {
-    $properties[$obj->featuremap_id][$obj->type_id] = $obj->value;
+    $properties[$obj->featuremap_id][$obj->type_id][$obj->rank] = $obj->value;
     $nexisting++;
   }
 
@@ -919,6 +922,50 @@ function carrotomics_admin_generate_featuremapprop() {
         }
         $nadded++;
       }
+    }
+  }
+  // Generate counts of each marker type
+  $sql7 = "SELECT P.featuremap_id, FP.value, COUNT(FP.value) AS count FROM {featureprop} FP"
+        . " LEFT JOIN {feature_relationship} FR ON FP.feature_id=FR.object_id"
+        . " LEFT JOIN {featurepos} P ON FR.subject_id=P.feature_id"
+        . " WHERE FR.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='instance_of' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='relationship'))"
+        . " AND FP.type_id=(SELECT cvterm_id FROM {cvterm} WHERE name='marker_type' AND cv_id=(SELECT cv_id FROM {cv} WHERE name='MAIN'))"
+        . " AND P.featuremap_id IS NOT NULL"
+        . " GROUP BY FP.value, P.featuremap_id"
+        . " ORDER BY P.featuremap_id, COUNT(FP.value) DESC";
+  $args7 = [];
+  try {
+    $results7 = chado_query($sql7, $args7);
+  } catch (Exception $e) {
+    return [1, $e->getMessage()];
+  }
+  $curr_map = 0;
+  $curr_rank = 1;
+  while ($obj = $results7->fetchObject()) {
+    // keep track of a value for rank
+    $curr_rank++;
+    if ($curr_map != $obj->featuremap_id) {
+      $curr_map = $obj->featuremap_id;
+      $curr_rank = 1;
+    }
+
+    // Displayed value will be type: count, e.g. 'AFLP: 123'
+    $display_value = $obj->value . ': ' . $obj->count;
+
+    // Only add if not already present
+    if (!array_key_exists($obj->featuremap_id, $properties)
+        or !array_key_exists($marker_type_count_id, $properties[$obj->featuremap_id])
+        or !array_key_exists($curr_rank, $properties[$obj->featuremap_id][$marker_type_count_id])) {
+      $sql8 = "INSERT INTO {featuremapprop} (featuremap_id, type_id, value, rank)"
+            . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+      $args8 = [':featuremap_id' => $obj->featuremap_id, ':type_id' => $marker_type_count_id,
+                ':value' => $display_value, ':rank' => $curr_rank];
+      try {
+        $results8 = chado_query($sql8, $args8);
+      } catch (Exception $e) {
+        return [1, $e->getMessage()];
+      }
+      $nadded++;
     }
   }
 
