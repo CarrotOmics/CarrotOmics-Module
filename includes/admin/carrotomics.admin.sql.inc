@@ -903,7 +903,7 @@ function carrotomics_admin_generate_featuremapprop() {
       if (!array_key_exists($featuremap_id, $properties) or !array_key_exists($type_id, $properties[$featuremap_id])) {
         $sql5 = "SELECT COUNT(*) AS marker_count FROM {featurepos} FP"
               . " LEFT JOIN {feature} F ON FP.feature_id=F.feature_id"
-              . " LEFT JOIN }cvterm} T ON F.type_id=T.cvterm_id"
+              . " LEFT JOIN {cvterm} T ON F.type_id=T.cvterm_id"
               . " WHERE T.name=:name AND FP.featuremap_id=:featuremap_id";
         $args5 = [':name' => $name, ':featuremap_id' => $featuremap_id];
         $count = chado_query($sql5, $args5)->fetchField();
