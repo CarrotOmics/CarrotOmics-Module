@@ -162,7 +162,7 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#name'   => 'merge_pub_btn',
     '#value'  => 'Find Duplicate Publications',
     '#suffix' => "<div>Download the generated list from <a href=\"".$merge_pub_url."\">here</a></div><br />"
-                 . "Remember to name the Excel tab \"merge_pub\"><br />"
+                 . "Remember to name the Excel tab \"merge_pub\"<br />"
                  . "<hr>",
   ];
 
