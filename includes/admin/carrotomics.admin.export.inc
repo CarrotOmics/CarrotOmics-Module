@@ -569,7 +569,8 @@ function carrotomics_admin_paa_list($paa_list_filename) {
   while ($obj = $results->fetchObject()) {
     // In case there are any line breaks, remove them.
     $name = preg_replace('/[\n\r]+/', ' ', $obj->name);
-    $description = preg_replace('/[\n\r]+/', ' ', $obj->description);
+    $description = $obj->description ?? '';
+    $description = preg_replace('/[\n\r]+/', ' ', $description);
     $cols = [ $obj->table, $obj->record_id, $obj->type, $name, $description];
     $content .= implode("\t", $cols) . "\n";
     $nfound++;
