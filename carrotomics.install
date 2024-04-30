@@ -227,6 +227,96 @@ function carrotomics_add_table_project_featuremap() {
 }
 
 /**
+ * Add custom project_image table
+ */
+function carrotomics_add_table_project_image() {
+  $schema = [
+    'fields' => [
+      'project_eimage_id' => ['type' => 'serial', 'not null' => TRUE],
+      'project_id' => ['type' => 'int', 'not null' => TRUE],
+      'eimage_id' => ['type' => 'int', 'not null' => TRUE],
+      'type_id' => ['type' => 'int', 'not null' => TRUE],
+      'rank' => ['type' => 'int', 'not null' => TRUE, 'default' => 0],
+    ],
+    'primary key' => ['project_eimage_id'],
+    'foreign keys' => [
+      'project' => [
+        'table' => 'project',
+        'columns' => [
+          'project_id' => 'project_id',
+        ],
+      ],
+      'eimage' => [
+        'table' => 'eimage',
+        'columns' => [
+          'eimage_id' => 'eimage_id',
+        ],
+      ],
+      'cvterm' => [
+        'table' => 'cvterm',
+        'columns' => [
+          'type_id' => 'cvterm_id',
+        ],
+      ],
+    ],
+    'indexes' => [
+      'project_image_idx1' => ['project_id'],
+      'project_image_idx2' => ['eimage_id'],
+      'project_image_idx3' => ['type_id'],
+    ],
+    'unique keys' => [
+      'project_image_unique_uq1' => ['project_id', 'eimage_id', 'type_id'],
+    ],
+  ];
+  chado_create_custom_table('project_image', $schema, TRUE, NULL, FALSE);
+}
+
+/**
+ * Add custom analysis_image table
+ */
+function carrotomics_add_table_analysis_image() {
+  $schema = [
+    'fields' => [
+      'analysis_eimage_id' => ['type' => 'serial', 'not null' => TRUE],
+      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
+      'eimage_id' => ['type' => 'int', 'not null' => TRUE],
+      'type_id' => ['type' => 'int', 'not null' => TRUE],
+      'rank' => ['type' => 'int', 'not null' => TRUE, 'default' => 0],
+    ],
+    'primary key' => ['analysis_eimage_id'],
+    'foreign keys' => [
+      'analysis' => [
+        'table' => 'analysis',
+        'columns' => [
+          'analysis_id' => 'analysis_id',
+        ],
+      ],
+      'eimage' => [
+        'table' => 'eimage',
+        'columns' => [
+          'eimage_id' => 'eimage_id',
+        ],
+      ],
+      'cvterm' => [
+        'table' => 'cvterm',
+        'columns' => [
+          'type_id' => 'cvterm_id',
+        ],
+      ],
+    ],
+    'indexes' => [
+      'analysis_image_idx1' => ['analysis_id'],
+      'analysis_image_idx2' => ['eimage_id'],
+      'analysis_image_idx3' => ['type_id'],
+    ],
+    'unique keys' => [
+      'analysis_image_unique_uq1' => ['analysis_id', 'eimage_id', 'type_id'],
+    ],
+  ];
+  chado_create_custom_table('analysis_image', $schema, TRUE, NULL, FALSE);
+}
+
+/**
  * Add custom tables:
  *   stock_analysis, project_featuremap
  */
@@ -235,6 +325,8 @@ function carrotomics_add_custom_tables() {
   carrotomics_add_table_biomaterial_stock();
   carrotomics_add_table_biomaterial_analysis();
   carrotomics_add_table_project_featuremap();
+  carrotomics_add_table_project_image();
+  carrotomics_add_table_analysis_image();
   // CarrotOmics is more strict about stock uniquename.
   chado_query('ALTER TABLE chado.stock ADD CONSTRAINT stock_c2 UNIQUE (uniquename)');
 }
@@ -414,6 +506,20 @@ function carrotomics_update_7101() {
 function carrotomics_update_7102() {
   try {
     carrotomics_add_table_biomaterial_stock();
+  }
+  catch (\PDOException $e) {
+    $error = $e->getMessage();
+    throw new DrupalUpdateException('Could not perform update: '. $error);
+  }
+}
+
+/**
+ * Add new project_image and analysis_image tables
+ */
+function carrotomics_update_7103() {
+  try {
+    carrotomics_add_table_project_image();
+    carrotomics_add_table_analysis_image();
   }
   catch (\PDOException $e) {
     $error = $e->getMessage();
