@@ -30,7 +30,17 @@ function carrotomics_bundle_fields_info($entity_type, $bundle) {
     or ($term_accession == 'CO_010__0000255')      // generated germplasm
     or ($term_accession == 'CO_010__0000162')      // 414 inbred line
     or ($term_accession == 'MAIN__breeding_research_material')
-    or ($term_accession == 'MAIN__population') ) {
+    or ($term_accession == 'MAIN__population')
+    or ($term_accession == 'operation__2945')  // next five for analysis table
+    or ($term_accession == 'operation__0362')
+    or ($term_accession == 'operation__0525')
+    or ($term_accession == 'format__1333')
+    or ($term_accession == 'local__kegg_results')
+    or ($term_accession == 'NCIT__C47885')  // project
+    or ($term_accession == 'local__Genome_Project')  // genome project
+    or ($term_accession == 'operation__0362')  // genome annotation project
+    or ($term_accession == 'operation__0525')  // genome assembly project
+    ) {
 
     $field_name = 'sio__geographic_position';
     $field_type = 'sio__geographic_position';
@@ -167,7 +177,11 @@ function carrotomics_bundle_instances_info($entity_type, $bundle) {
         ],
       ],
     ];
+  }
 
+  if ( ($bundle->data_table == 'analysis')
+      or ($bundle->data_table == 'project')
+      or ($bundle->data_table == 'stock') ) {
     $field_name = 'iao__image';
     $field_type = 'iao__image';
     $instances[$field_name] = [
