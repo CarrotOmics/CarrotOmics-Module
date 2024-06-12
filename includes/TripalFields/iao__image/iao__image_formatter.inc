@@ -25,35 +25,42 @@ class iao__image_formatter extends ChadoFieldFormatter {
       // the only required item is the image itself
       // todo: this path might be stored somewhere, find out where
       // otherwise make it a settings variable
-      $uri = '/sites/default/files/bulk_data/carrotomics/germplasm/image/' . $item['value']['uri'];
+      $image_uri = '/sites/default/files/bulk_data/carrotomics/germplasm/image/' . $item['value']['uri'];
       // thumbnail of image
-      $tn = '/sites/default/files/bulk_data/carrotomics/germplasm/icon/' . $item['value']['uri'];
-
-//https://test.carrotomics.org/sites/default/files/k11611-1i.tn_.jpg
+      $image_tn = '/sites/default/files/bulk_data/carrotomics/germplasm/icon/' . $item['value']['uri'];
 
       // All annotations, if present, will be converted to a single string
       $annotationstring = '';
       $annotations = $item['value']['annotations'];
 
-      // add the file name without path as one of the annotations
-      $annotations['file_name'] = preg_replace('/^.*\//', '', $item['value']['uri']);
-
       // sort by keys, case insensitive
       ksort($annotations, SORT_STRING | SORT_FLAG_CASE);
 
       foreach ($annotations as $key => $value) {
-        // remove CV name from label, it is just clutter for the end user
+        // skip uri annotations
+        if (preg_match('/^#/', $key)) {
+          continue;
+        }
+        // remove CV name from label, it is just clutter for
+        // the end user, but would be shown in web services
         $term = preg_replace('/^.*:/', '', $key);
         // replace underscores with spaces for display
         $term = preg_replace('/_/', ' ', $term);
-        // todo: project_id should link to project. For now mask it
-        if ($term != 'project id') {
+
+        // there will be a corresponding #xxx_uri key if a link is present
+        $uri_key = '#' . $key . '_uri';
+        if (array_key_exists($uri_key, $annotations)) {
+          $uri = $annotations[$uri_key];
+          $annotationstring .= '<li><strong>' . $term . '</strong>: <a href="'
+              . $uri . '">' . $value . '</a></li>';
+        }
+        else {
           $annotationstring .= '<li><strong>' . $term . '</strong>: ' . $value . '</li>';
         }
       }
 
       // todo: there's probably a function I should call here l() ?
-      $image = '<a href="'.$uri.'"><img src="'.$tn.'" border="0"></a>';
+      $image = '<a href="' . $image_uri . '"><img src="' . $image_tn . '" border="0"></a>';
       $rows[] = [
         $image,
         $annotationstring

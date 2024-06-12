@@ -150,15 +150,21 @@ class iao__image extends ChadoField {
                                           ['eimage_id' => $eimage_id],
                                           ['return_array' => TRUE]);
         foreach ($annotations as $annotation) {
-          $label = $annotation->type_id->name;  // the CV term for this annotation
+          $term = $annotation->type_id->name;  // the CV term for this annotation
           $value = $annotation->value;  // the value of the annotation
-          if ($value) {
-            $one_eimage_record['annotations'][$label] = $value;
+          // todo: project_id is not from a linker table, and should link to project. For now mask it
+          if ($term != 'project_id') {
+            if ($value) {
+              $one_eimage_record['annotations'][$term] = $value;
+            }
           }
         }
 
+        // add the file name without path as an annotation
+        $file_name_term = 'File Name'; //'data:1050';
+        $one_eimage_record['annotations'][$file_name_term] = preg_replace('/^.*\//', '', $image_uri);
+
         // special case: link image back to stock if possible.
-        // This hardcodes the link - not desirable, but wait until Tripal 4 for a better method
         // @todo include biomaterial also?
         $one_eimage_record = $this->getStocks($eimage_id, $acbundles, $one_eimage_record);
 
@@ -171,8 +177,9 @@ class iao__image extends ChadoField {
 
   protected function getStocks($eimage_id, $acbundles, $hostrecord) {
     // Consult the linking table for any linked stocks
-    $sql = "SELECT S.stock_id, S.uniquename FROM {stock_image} SI"
+    $sql = "SELECT S.stock_id, S.uniquename, T.name FROM {stock_image} SI"
          . " LEFT JOIN {stock} S ON SI.stock_id=S.stock_id"
+         . " LEFT JOIN {cvterm} T ON S.type_id=T.cvterm_id"
          . " WHERE SI.eimage_id = :eimage_id";
     $args = [ ":eimage_id" => $eimage_id ];
     $records = chado_query($sql, $args);
@@ -182,6 +189,8 @@ class iao__image extends ChadoField {
       while ( $record = $records->fetchObject() ) {
         $stock_id = $record->stock_id;
         $stock_name = $record->uniquename;
+        $stock_type_id = $record->name;
+        $entity_type_id = '#' . $stock_type_id . '_uri';
 
         // Get entity id values
         $found_entity = FALSE;
@@ -193,21 +202,19 @@ class iao__image extends ChadoField {
           // not all stock types may have entities, only add a link to those that do
           if ( $brecords ) {
             while ($brecord = $brecords->fetchObject()) {
-              $link = '<a href="/bio_data/' . $brecord->entity_id . '">' . $stock_name . '</a>';
-              $hostrecord['annotations'][$entity_name] = $link;
+              $path = '/bio_data/' . $brecord->entity_id;
+              $hostrecord['annotations'][$stock_type_id] = $stock_name;
+              $hostrecord['annotations'][$entity_type_id] = $path;
               $found_entity = TRUE;
             }
           }
         }
         // If there is a stock but no entity, then just display the name
         if (!$found_entity) {
-          $hostrecord['annotations']['stock'] = $stock_name;
+          $hostrecord[$stock_type_id] = $stock_name;
         }
       }
     }
     return $hostrecord;
   }
 }
-
-
-
