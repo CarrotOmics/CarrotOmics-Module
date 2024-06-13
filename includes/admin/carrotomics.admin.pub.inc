@@ -127,7 +127,7 @@ function carrotomics_admin_pub_form($form, &$form_state) {
   ];
 
   // Add a 'Remove Empty Publication Properties' button
-  $form['unlinked_pub_btn'] = [
+  $form['empty_prop_btn'] = [
     '#type'   => 'submit',
     '#name'   => 'empty_prop_btn',
     '#value'  => 'Remove Empty Publication Properties',
@@ -838,13 +838,16 @@ function carrotomics_admin_unlinked_pub() {
   $titlehashpattern = ['/^erratum to: */i', '/^erratum[:\.] */i',
                        '/^correction to: */i', '/^correction[:\.] */i', '/^publisher correction[:\.] */i',
                        '/^corrigendum[:\.] */i',
-                       '/ *\[erratum[^\]]+\] */i'];
+                       '/ *\[erratum[^\]]+\] */i',
+                       '/retracted article[:\.] */i', '/retraction notice[:\.] */i', '/retraction note[:\.] */i',
+                       '/retraction[:\.] */i', '/retracted[:\.] */i'];
 
   // main query for candidate erratum publications
   $sql1 = "SELECT pub_id, title FROM {pub}"
         . " WHERE lower(title) LIKE '%erratum%'"
         . " OR lower(title) LIKE '%correction%'"
-        . " OR lower(title) LIKE '%corrigendum%'";
+        . " OR lower(title) LIKE '%corrigendum%'"
+        . " OR lower(title) LIKE '%retract%'";
   $args1 = [];
   $results1 = chado_query($sql1, $args1);
 
