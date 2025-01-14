@@ -49,11 +49,11 @@ function carrotomics_admin_pub_form($form, &$form_state) {
     '#value'  => 'Update publication Unique Local Identifier',
     '#prefix' => '<div style="padding-top:30px;"><em>'
                  . "The \"uniquename\" column in the chado.pub table is named"
-                 . " \"Unique Local Identifier\" in the widget. These values are not displayed"
-                 . " to the end user. The publication loaders generate this to be the publication"
-                 . " citation, which is long, and it is not used on CarrotOmics."
-                 . " Replace these with the pub_id value. Additionally, placeholder citations"
-                 . " consisting of a single character are expanded using chado_pub_create_citation()"
+                 . " \"Unique Local Identifier\" in the widget, but is intended"
+                 . " to hold the citation. There is also a citation property."
+                 . " Make sure these match."
+                 . " Additionally, placeholder citations consisting of a single"
+                 . " character are expanded using chado_pub_create_citation()"
                  . "</em></div><br />",
     '#suffix' => "<hr>",
   ];
@@ -955,7 +955,7 @@ function carrotomics_admin_unlinked_pub() {
 }
 
 /**
- * Change the Unique Local Identifier to be pub_id
+ * Change the Unique Local Identifier to be the citation
  *
  */
 function carrotomics_admin_pub_uli() {
@@ -964,56 +964,29 @@ function carrotomics_admin_pub_uli() {
   [$error, $citation_id] = carrotomics_lookup_cvterm_id('tripal_pub', 'Citation');
   if ($error ){ return[$error, $citation_id]; }
 
-  // Find the publications needing to be updated, but leave the special null pub alone
-  $sql1 = "SELECT pub_id, uniquename FROM {pub} P"
-       . " WHERE NOT pub_id::text=uniquename"
-       . " AND NOT uniquename='null'";  
-  $args1 = [];
+  // Check for single-character or null citations
+  // This is a shortcut so that these can be computationally generated now.
+  $sql1 = "SELECT P.pub_id, PP.pubprop_id FROM {pub} P"
+       . " LEFT JOIN {pubprop} PP ON P.pub_id=PP.pub_id"
+       . " WHERE PP.type_id=:citation_id"
+       . " AND LENGTH(PP.value) <= 1";
+  $args1 = [':citation_id' => $citation_id];
   $results1 = chado_query($sql1, $args1);
 
   // Loop and make changes, keeping track of the number of changes made
-  $nchanged = 0;
-  $nerrors = 0;
-  while ($obj = $results1->fetchObject()) {
-    $pub_id = $obj->pub_id;
-    $uniquename = $obj->uniquename;
-    $where = [ 'pub_id' => $pub_id ];
-    $newvalues = [ 'uniquename' => $pub_id ];
-    try {
-      $success = chado_update_record('pub', $where, $newvalues);
-      if ($success) { 
-        $nchanged++;
-      }
-      else {
-        $nerrors++;
-      }
-    } catch (Exception $e) {
-      $nerrors++;
-      $errors = '<br>' . $e->getMessage();
-    }
-  }
-
-  // Check for single-character or null citations
-  $sql2 = "SELECT P.pub_id, PP.pubprop_id FROM {pub} P LEFT JOIN {pubprop} PP ON P.pub_id=PP.pub_id"
-       . " WHERE PP.type_id=:citation_id"
-       . " AND LENGTH(PP.value) <= 1";
-  $args2 = [':citation_id' => $citation_id];
-  $results2 = chado_query($sql2, $args2);
-
-  // Loop and make changes, keeping track of the number of changes made
   $ncited = 0;
-  while ($obj = $results2->fetchObject()) {
+  while ($obj = $results1->fetchObject()) {
     $pub_id = $obj->pub_id;
     $pubprop_id = $obj->pubprop_id;
     $pub_arr = tripal_pub_get_publication_array($pub_id, FALSE);
     if ($pub_arr) {
       $citation = chado_pub_create_citation($pub_arr);
       if ($citation) {
-        $sql3 = "UPDATE {pubprop} SET value = :citation"
+        $sql2 = "UPDATE {pubprop} SET value = :citation"
             . " WHERE pubprop_id=:pubprop_id";
-        $args3 = [':citation' => $citation, ':pubprop_id' => $pubprop_id];
+        $args2 = [':citation' => $citation, ':pubprop_id' => $pubprop_id];
         try {
-          $results3 = chado_query($sql3, $args3);
+          $results2 = chado_query($sql2, $args2);
           $ncited++;
         } catch (Exception $e) {
           $nerrors++;
@@ -1028,6 +1001,40 @@ function carrotomics_admin_pub_uli() {
     else {
       $errors .= "No pub_arr for pub_id $pub_id. ";
       $nerrors++;
+    }
+  }
+
+  // Find any uniquenames needing to be updated, but leave the special null pub alone
+  // These will be publications where the property citation is not equal to
+  // the uniquename value.
+  $sql3 = "SELECT P.pub_id, P.uniquename, PP.value FROM {pub} P"
+       . " LEFT JOIN {pubprop} PP ON P.pub_id=PP.pub_id"
+       . " WHERE PP.type_id=$citation_id"
+       . " AND NOT P.uniquename=PP.value"
+       . " AND NOT P.uniquename='null'";
+  $args3 = [];
+  $results3 = chado_query($sql3, $args3);
+
+  // Loop and copy property citation to uniquename, keeping track of the number of changes made
+  $nchanged = 0;
+  $nerrors = 0;
+  while ($obj = $results3->fetchObject()) {
+    $pub_id = $obj->pub_id;
+    $citation = $obj->value;
+    $uniquename = $obj->uniquename;
+    $where = [ 'pub_id' => $pub_id ];
+    $newvalues = [ 'uniquename' => $citation ];
+    try {
+      $success = chado_update_record('pub', $where, $newvalues);
+      if ($success) {
+        $nchanged++;
+      }
+      else {
+        $nerrors++;
+      }
+    } catch (Exception $e) {
+      $nerrors++;
+      $errors = '<br>' . $e->getMessage();
     }
   }
 
