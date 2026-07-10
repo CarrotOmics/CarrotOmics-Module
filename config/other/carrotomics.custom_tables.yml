@@ -1,0 +1,220 @@
+stock_analysis:
+    table: 'stock_analysis'
+    fields:
+        stock_analysis_id:
+            type: 'serial'
+            'not null': true
+        stock_id:
+            type: 'int'
+            'not null': true
+        analysis_id:
+            type: 'int'
+            'not null': true
+    'primary key':
+        - 'stock_analysis_id'
+    'unique keys':
+        stock_analysis_unique_uq1:
+            - 'stock_id'
+            - 'analysis_id'
+    indexes:
+        stock_analysis_idx1:
+            - 'stock_id'
+        stock_analysis_idx2:
+            - 'analysis_id'
+    'foreign keys':
+        stock:
+            table: 'stock'
+            columns:
+                stock_id: 'stock_id'
+        analysis:
+            table: 'analysis'
+            columns:
+                analysis_id: 'analysis_id'
+biomaterial_analysis:
+    table: 'biomaterial_analysis'
+    fields:
+        biomaterial_analysis_id:
+            type: 'serial'
+            'not null': true
+        biomaterial_id:
+            type: 'int'
+            'not null': true
+        analysis_id:
+            type: 'int'
+            'not null': true
+    'primary key':
+        - 'biomaterial_analysis_id'
+    'unique keys':
+        biomaterial_analysis_unique_uq1:
+            - 'biomaterial_id'
+            - 'analysis_id'
+    indexes:
+        biomaterial_analysis_idx1:
+            - 'biomaterial_id'
+        biomaterial_analysis_idx2:
+            - 'analysis_id'
+    'foreign keys':
+        biomaterial:
+            table: 'biomaterial'
+            columns:
+                biomaterial_id: 'biomaterial_id'
+        analysis:
+            table: 'analysis'
+            columns:
+                analysis_id: 'analysis_id'
+biomaterial_stock:
+    table: 'biomaterial_stock'
+    fields:
+        biomaterial_stock_id:
+            type: 'serial'
+            'not null': true
+        biomaterial_id:
+            type: 'int'
+            'not null': true
+        stock_id:
+            type: 'int'
+            'not null': true
+    'primary key':
+        - 'biomaterial_stock_id'
+    'unique keys':
+        biomaterial_stock_unique_uq1:
+            - 'biomaterial_id'
+            - 'stock_id'
+    indexes:
+        biomaterial_stock_idx1:
+            - 'biomaterial_id'
+        biomaterial_stock_idx2:
+            - 'stock_id'
+    'foreign keys':
+        biomaterial:
+            table: 'biomaterial'
+            columns:
+                biomaterial_id: 'biomaterial_id'
+        stock:
+            table: 'stock'
+            columns:
+                stock_id: 'stock_id'
+project_featuremap:
+    table: 'project_featuremap'
+    fields:
+        project_featuremap_id:
+            type: 'serial'
+            'not null': true
+        project_id:
+            type: 'int'
+            'not null': true
+        featuremap_id:
+            type: 'int'
+            'not null': true
+    'primary key':
+        - 'project_featuremap_id'
+    'unique keys':
+        project_featuremap_unique_uq1:
+            - 'project_id'
+            - 'featuremap_id'
+    indexes:
+        project_featuremap_idx1:
+            - 'project_id'
+        project_featuremap_idx2:
+            - 'featuremap_id'
+    'foreign keys':
+        project:
+            table: 'project'
+            columns:
+                project_id: 'project_id'
+        featuremap:
+            table: 'featuremap'
+            columns:
+                featuremap_id: 'featuremap_id'
+project_image:
+    table: 'project_image'
+    fields:
+        project_eimage_id:
+            type: 'serial'
+            'not null': true
+        project_id:
+            type: 'int'
+            'not null': true
+        eimage_id:
+            type: 'int'
+            'not null': true
+        type_id:
+            type: 'int'
+            'not null': true
+        rank:
+            type: 'int'
+            'not null': true
+            'default': 0
+    'primary key':
+        - 'project_eimage_id'
+    'unique keys':
+        project_image_unique_uq1:
+            - 'project_id'
+            - 'eimage_id'
+            - 'type_id'
+    indexes:
+        project_image_idx1:
+            - 'project_id'
+        project_image_idx2:
+            - 'eimage_id'
+        project_image_idx3:
+            - 'type_id'
+    'foreign keys':
+        project:
+            table: 'project'
+            columns:
+                project_id: 'project_id'
+        eimage:
+            table: 'eimage'
+            columns:
+                eimage_id: 'eimage_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'
+analysis_image:
+    table: 'analysis_image'
+    fields:
+        analysis_eimage_id:
+            type: 'serial'
+            'not null': true
+        analysis_id:
+            type: 'int'
+            'not null': true
+        eimage_id:
+            type: 'int'
+            'not null': true
+        type_id:
+            type: 'int'
+            'not null': true
+        rank:
+            type: 'int'
+            'not null': true
+            'default': 0
+    'primary key':
+        - 'analysis_eimage_id'
+    'unique keys':
+        analysis_image_unique_uq1:
+            - 'analysis_id'
+            - 'eimage_id'
+            - 'type_id'
+    indexes:
+        analysis_image_idx1:
+            - 'analysis_id'
+        analysis_image_idx2:
+            - 'eimage_id'
+        analysis_image_idx3:
+            - 'type_id'
+    'foreign keys':
+        analysis:
+            table: 'analysis'
+            columns:
+                analysis_id: 'analysis_id'
+        eimage:
+            table: 'eimage'
+            columns:
+                eimage_id: 'eimage_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'

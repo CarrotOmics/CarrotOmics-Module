@@ -1,0 +1,10 @@
+name: 'CarrotOmics Extensions Module'
+type: 'module'
+description: 'Extended Tripal themes and templates created for CarrotOmics'
+core_version_requirement: '^10.6 || ^11.3'
+php: 8.2
+package: 'CarrotOmics'
+version: '4.0.0'
+dependencies:
+  - 'tripal:tripal'
+  - 'tripal:tripal_chado'

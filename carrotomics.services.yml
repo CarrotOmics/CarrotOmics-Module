@@ -1,0 +1,12 @@
+services:
+  carrotomics.rebuild_service:
+    class: 'Drupal\carrotomics\Services\CarrotOmicsRebuildService'
+    arguments:
+      - '@tripal_chado.database'
+  'Drupal\carrotomics\Services\CarrotOmicsRebuildService':
+    alias: 'carrotomics.rebuild_service'
+  carrotomics.hooks:
+    class: 'Drupal\carrotomics\Hook\CarrotOmicsHooks'
+    arguments:
+      - '@carrotomics.rebuild_service'
+

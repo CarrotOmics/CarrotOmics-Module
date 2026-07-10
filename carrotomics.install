@@ -1,319 +1,99 @@
 <?php
 /**
  * @file
- *
- * Installation of the carrotomics module
+ * Contains functions used to install/uninstall the CarrotOmics module.
  */
 
+use Drupal\Core\Database\ConnectionNotDefinedException;
+use Drupal\Core\Database\Database;
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\user\Entity\Role;
 
 /**
  * Implements hook_requirements().
+ *
+ * This hook does not support attributes and must remain procedural.
  */
-function carrotomics_requirements($phase) {
+function tripal_file_requirements($phase) {
   $requirements = [];
   if ($phase == 'install') {
-    if (!module_exists('tripal_core') and !module_exists('tripal')) {
-      $requirements['carrotomics-tripal'] = [
-        'title' => "carrotomics",
-        'value' => "ERROR: You must have Tripal v2 or v3 installed to use this module.",
+    if (version_compare(\Drupal::VERSION, 10.6) < 0) {
+      $requirements['carrotomics'] = [
+        'title' => 'carrotomics',
+        'value' => 'ERROR: You must have Drupal version 10.6 or higher installed to use this module.',
         'severity' => REQUIREMENT_ERROR,
       ];
-    }
-    // Make sure chado is installed.
-    if (!$GLOBALS["chado_is_installed"]) {
-      $requirements['carrotomics-chado'] = [
-        'title' => "carrotomics",
-        'value' => "ERROR: Chado is not installed. Version 1.3 must be installed before this module can be enabled",
-        'severity' => REQUIREMENT_ERROR,
-      ];
-    }
-    // Requires chado version 1.3
-    else {
-      $chado_version = chado_get_version();
-      if ($chado_version < '1.3') {
-        $requirements['carrotomics-chado'] = [
-          'title' => "carrotomics",
-          'value' => "ERROR: Chado version is $chado_version, this module requires version 1.3",
-          'severity' => REQUIREMENT_ERROR,
-        ];
-      }
     }
   }
   return $requirements;
 }
 
 /**
- * Implements hook_install().
- *
- * Performs actions when the module is first installed.
+ * Implementation of hook_install().
  *
  * @ingroup carrotomics
  */
 function carrotomics_install() {
-  // Add custom tables
-  carrotomics_add_custom_tables();
-  // Add columns to chado.nd_geolocation table
-  carrotomics_update_nd_geolocation();
-  // Add various required cv terms
-  carrotomics_add_cv_terms();
+  $chado = \Drupal::service('tripal_chado.database');
+
+  // Create tripal terms for the new CV terms defined in YAML files.
+  carrotomics_show_message('Adding new vocabulary terms');
+  carrotomics_create_tripal_terms();
+
+#  // Add custom tables
+#  carrotomics_add_custom_tables();
+
+  // Add the custom tables needed to associate Chado content with files.
+  carrotomics_show_message('Adding module tables');
+  \Drupal::service('carrotomics.rebuild_service')->createCustomChadoTables();
+
+#  // Add columns to chado.nd_geolocation table
+#  carrotomics_update_nd_geolocation();
+#  // Add various required cv terms
+#  carrotomics_add_cv_terms();
 }
 
 /**
  * Implements hook_uninstall().
  *
- * Performs actions when the module is uninstalled.
- * Warning: data in new custom table columns will be lost!
+ * @ingroup tripal
+ */
+function tripal_uninstall() {
+  // Remove configuration.
+  $config = \Drupal::service('config.factory')
+    ->getEditable('carrotomics.settings');
+  $config->delete();
+}
+
+/**
+ * Displays a status message.
+ * 
+ * This handles displaying both to the UI and to drush output.
  *
- * @ingroup carrotomics
+ * @param string $message
+ *   The message to be displayed.
  */
-function carrotomics_uninstall() {
-  db_drop_field('chado.nd_geolocation', 'latitude_dev');
-  db_drop_field('chado.nd_geolocation', 'longitude_dev');
-  db_drop_field('chado.nd_geolocation', 'altitude_dev');
-  db_drop_table('chado.stock_analysis');
-  db_drop_table('chado.project_featuremap');
+function carrotomics_show_message(string $message) {
+  // This is displayed when this module is installed with the UI.
+  \Drupal::messenger()->addStatus($message);
+  // This is displayed when this module is installed with drush.
+  \Drupal::logger('carrotomics')->notice($message);
 }
 
 /**
- * Add custom stock_analysis table
+ * Creates tripal terms for newly added CV terms for content types.
+ *
+ * The new CV terms are defined in YAML in /config/install/
+ * carrotomics.tripal_content_terms.carrotomics_content_terms.yml
+ * and files located there are added automatically by Drupal,
+ * so here we just need to install them.
+ *
+ * @return void
+ *   No return value.
  */
-function carrotomics_add_table_stock_analysis() {
-  $schema = [
-    'fields' => [
-      'stock_analysis_id' => ['type' => 'serial', 'not null' => TRUE],
-      'stock_id' => ['type' => 'int', 'not null' => TRUE],
-      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
-    ],
-    'primary key' => ['stock_analysis_id'],
-    'foreign keys' => [
-      'stock' => [
-        'table' => 'stock',
-        'columns' => [
-          'stock_id' => 'stock_id',
-        ],
-      ],
-      'analysis' => [
-        'table' => 'analysis',
-        'columns' => [
-          'analysis_id' => 'analysis_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'stock_analysis_idx1' => ['stock_id'],
-      'stock_analysis_idx2' => ['analysis_id'],
-    ],
-    'unique keys' => [
-      'stock_analysis_unique_uq1' => ['stock_id', 'analysis_id'],
-    ],
-  ];
-  chado_create_custom_table('stock_analysis', $schema, TRUE, NULL, FALSE);
-}
-
-/**
- * Add custom biomaterial_analysis table
- */
-function carrotomics_add_table_biomaterial_analysis() {
-  $schema = [
-    'fields' => [
-      'biomaterial_analysis_id' => ['type' => 'serial', 'not null' => TRUE],
-      'biomaterial_id' => ['type' => 'int', 'not null' => TRUE],
-      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
-    ],
-    'primary key' => ['biomaterial_analysis_id'],
-    'foreign keys' => [
-      'biomaterial' => [
-        'table' => 'biomaterial',
-        'columns' => [
-          'biomaterial_id' => 'biomaterial_id',
-        ],
-      ],
-      'analysis' => [
-        'table' => 'analysis',
-        'columns' => [
-          'analysis_id' => 'analysis_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'biomaterial_analysis_idx1' => ['biomaterial_id'],
-      'biomaterial_analysis_idx2' => ['analysis_id'],
-    ],
-    'unique keys' => [
-      'biomaterial_analysis_unique_uq1' => ['biomaterial_id', 'analysis_id'],
-    ],
-  ];
-  chado_create_custom_table('biomaterial_analysis', $schema, TRUE, NULL, FALSE);
-}
-
-/**
- * Add custom biomaterial_stock table
- */
-function carrotomics_add_table_biomaterial_stock() {
-  $schema = [
-    'fields' => [
-      'biomaterial_stock_id' => ['type' => 'serial', 'not null' => TRUE],
-      'biomaterial_id' => ['type' => 'int', 'not null' => TRUE],
-      'stock_id' => ['type' => 'int', 'not null' => TRUE],
-      'type_id' => ['type' => 'int', 'not null' => FALSE],
-    ],
-    'primary key' => ['biomaterial_stock_id'],
-    'foreign keys' => [
-      'biomaterial' => [
-        'table' => 'biomaterial',
-        'columns' => [
-          'biomaterial_id' => 'biomaterial_id',
-        ],
-      ],
-      'stock' => [
-        'table' => 'stock',
-        'columns' => [
-          'stock_id' => 'stock_id',
-        ],
-      ],
-      'cvterm' => [
-        'table' => 'cvterm',
-        'columns' => [
-          'type_id' => 'cvterm_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'biomaterial_stock_idx1' => ['biomaterial_id'],
-      'biomaterial_stock_idx2' => ['stock_id'],
-      'biomaterial_stock_idx3' => ['type_id'],
-    ],
-    'unique keys' => [
-      'biomaterial_stock_unique_uq1' => ['biomaterial_id', 'stock_id', 'type_id'],
-    ],
-  ];
-  chado_create_custom_table('biomaterial_stock', $schema, TRUE, NULL, FALSE);
-}
-
-/**
- * Add custom project_featuremap table
- */
-function carrotomics_add_table_project_featuremap() {
-  $schema = [
-    'fields' => [
-      'project_featuremap_id' => ['type' => 'serial', 'not null' => TRUE],
-      'project_id' => ['type' => 'int', 'not null' => TRUE],
-      'featuremap_id' => ['type' => 'int', 'not null' => TRUE],
-    ],
-    'primary key' => ['project_featuremap_id'],
-    'foreign keys' => [
-      'project' => [
-        'table' => 'project',
-        'columns' => [
-          'project_id' => 'project_id',
-        ],
-      ],
-      'featuremap' => [
-        'table' => 'featuremap',
-        'columns' => [
-          'featuremap_id' => 'featuremap_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'project_featuremap_idx1' => ['project_id'],
-      'project_featuremap_idx2' => ['featuremap_id'],
-    ],
-    'unique keys' => [
-      'project_featuremap_unique_uq1' => ['project_id', 'featuremap_id'],
-    ],
-  ];
-  chado_create_custom_table('project_featuremap', $schema, TRUE, NULL, FALSE);
-}
-
-/**
- * Add custom project_image table
- */
-function carrotomics_add_table_project_image() {
-  $schema = [
-    'fields' => [
-      'project_eimage_id' => ['type' => 'serial', 'not null' => TRUE],
-      'project_id' => ['type' => 'int', 'not null' => TRUE],
-      'eimage_id' => ['type' => 'int', 'not null' => TRUE],
-      'type_id' => ['type' => 'int', 'not null' => TRUE],
-      'rank' => ['type' => 'int', 'not null' => TRUE, 'default' => 0],
-    ],
-    'primary key' => ['project_eimage_id'],
-    'foreign keys' => [
-      'project' => [
-        'table' => 'project',
-        'columns' => [
-          'project_id' => 'project_id',
-        ],
-      ],
-      'eimage' => [
-        'table' => 'eimage',
-        'columns' => [
-          'eimage_id' => 'eimage_id',
-        ],
-      ],
-      'cvterm' => [
-        'table' => 'cvterm',
-        'columns' => [
-          'type_id' => 'cvterm_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'project_image_idx1' => ['project_id'],
-      'project_image_idx2' => ['eimage_id'],
-      'project_image_idx3' => ['type_id'],
-    ],
-    'unique keys' => [
-      'project_image_unique_uq1' => ['project_id', 'eimage_id', 'type_id'],
-    ],
-  ];
-  chado_create_custom_table('project_image', $schema, TRUE, NULL, FALSE);
-}
-
-/**
- * Add custom analysis_image table
- */
-function carrotomics_add_table_analysis_image() {
-  $schema = [
-    'fields' => [
-      'analysis_eimage_id' => ['type' => 'serial', 'not null' => TRUE],
-      'analysis_id' => ['type' => 'int', 'not null' => TRUE],
-      'eimage_id' => ['type' => 'int', 'not null' => TRUE],
-      'type_id' => ['type' => 'int', 'not null' => TRUE],
-      'rank' => ['type' => 'int', 'not null' => TRUE, 'default' => 0],
-    ],
-    'primary key' => ['analysis_eimage_id'],
-    'foreign keys' => [
-      'analysis' => [
-        'table' => 'analysis',
-        'columns' => [
-          'analysis_id' => 'analysis_id',
-        ],
-      ],
-      'eimage' => [
-        'table' => 'eimage',
-        'columns' => [
-          'eimage_id' => 'eimage_id',
-        ],
-      ],
-      'cvterm' => [
-        'table' => 'cvterm',
-        'columns' => [
-          'type_id' => 'cvterm_id',
-        ],
-      ],
-    ],
-    'indexes' => [
-      'analysis_image_idx1' => ['analysis_id'],
-      'analysis_image_idx2' => ['eimage_id'],
-      'analysis_image_idx3' => ['type_id'],
-    ],
-    'unique keys' => [
-      'analysis_image_unique_uq1' => ['analysis_id', 'eimage_id', 'type_id'],
-    ],
-  ];
-  chado_create_custom_table('analysis_image', $schema, TRUE, NULL, FALSE);
+function carrotomics_create_tripal_terms(): void {
+  $terms_init_service = \Drupal::service('tripal_chado.terms_init');
+  $terms_init_service->installTerms('carrotomics_content_terms');
 }
 
 /**
@@ -329,200 +109,4 @@ function carrotomics_add_custom_tables() {
   carrotomics_add_table_analysis_image();
   // CarrotOmics is more strict about stock uniquename.
   chado_query('ALTER TABLE chado.stock ADD CONSTRAINT stock_c2 UNIQUE (uniquename)');
-}
-
-/**
- * Add three new custom columns to chado.nd_geolocation table
- * to store uncertainty (plus or minus) values
- */
-function carrotomics_update_nd_geolocation() {
-  db_add_field('chado.nd_geolocation', 'latitude_dev', [
-    'type' => 'float',
-    'size' => 'normal',
-    'not null' => FALSE,
-    'description' => 'Half of the width of the range of uncertainty of latitude',
-  ]);
-  db_add_field('chado.nd_geolocation', 'longitude_dev', [
-    'type' => 'float',
-    'size' => 'normal',
-    'not null' => FALSE,
-    'description' => 'Half of the width of the range of uncertainty of longitude',
-  ]);
-  db_add_field('chado.nd_geolocation', 'altitude_dev', [
-    'type' => 'float',
-    'size' => 'normal',
-    'not null' => FALSE,
-    'description' => 'Half of the width of the range of uncertainty of altitude',
-  ]);
-}
-
-/**
- * Add CV terms used by this module
- */
-function carrotomics_add_cv_terms() {
-  //
-  // Controlled Vocabulary entries
-  //
-  // The SIO cv does not need to be added because it is
-  // automatically added by the base Tripal setup.
-  // Add the IAO controlled vocabulary
-  chado_insert_cv('IAO', 'Information Artifact Ontology  is a new ontology of information entities, originally driven by work by the OBI digital entity and realizable information entity branch.');
-  // Add the EDAM controlled vocabulary
-  chado_insert_cv('EDAM', 'EDAM is an ontology of well established, familiar concepts that are prevalent within bioinformatics, including types of data and data identifiers, data formats, operations and topics. EDAM is a simple ontology - essentially a set of terms with synonyms and definitions - organised into an intuitive hierarchy for convenient use by curators, software developers and end-users. EDAM is suitable for large-scale semantic annotations and categorization of diverse bioinformatics resources. EDAM is also suitable for diverse application including for example within workbenches and workflow-management systems, software distributions, and resource registries.');
-
-  //
-  // Field types
-  //
-  $term = chado_insert_cvterm([
-    'id' => 'SIO:000013',
-    'name' => 'geographic position',
-    'cv_name' => 'SIO',
-    'definition' => 'A geographic position is the coordinate of an entity against some geographic coordinate system.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'IAO:0000101',
-    'name' => 'image',
-    'cv_name' => 'IAO',
-    'definition' => 'An image is an affine projection to a two dimensional surface, of measurements of some quality of an entity or entities repeated at regular intervals across a spatial range, where the measurements are represented as color and luminosity on the projected on surface.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'data:2091',
-    'name' => 'Accession',
-    'cv_name' => 'EDAM',
-    'definition' => 'A persistent (stable) and unique identifier, typically identifying an object (entry) from a database.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'data:3140',
-    'name' => 'Phylogenetic tree',
-    'cv_name' => 'EDAM',
-    'definition' => 'The raw data (not just an image) from which a phylogenetic tree is directly generated or plotted, such as topology, lengths (in time or in expected amounts of variance) and a confidence interval for each length.',
-  ]);
-
-  // local terms
-  $term = chado_insert_cvterm([
-    'id' => 'local:analysis_project',
-    'name' => 'analysis_project',
-    'cv_name' => 'local',
-    'definition' => 'Used for a Tripal Field to link all projects containing a given analysis',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:biomaterial_project',
-    'name' => 'biomaterial_project',
-    'cv_name' => 'local',
-    'definition' => 'Provides a link from biomaterials to projects or to analyses that use them',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:project_analysis',
-    'name' => 'project_analysis',
-    'cv_name' => 'local',
-    'definition' => 'Used for a Tripal Field to link all analyses within a given project',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:stock_analysis',
-    'name' => 'stock_analysis',
-    'cv_name' => 'local',
-    'definition' => 'Used for a Tripal Field to link all stocks to analyses that use them',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:stock_project',
-    'name' => 'stock_project',
-    'cv_name' => 'local',
-    'definition' => 'Used for a Tripal Field to link all stocks to projects that use them',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:project_stock',
-    'name' => 'project_stock',
-    'cv_name' => 'local',
-    'definition' => 'Used for a Tripal Field to link all projects containing a given stock',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:Number_of_markers',
-    'name' => 'Number of markers',
-    'cv_name' => 'local',
-    'definition' => 'Total number of markers in a linkage map.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:Number_of_quantitative_trait_loci',
-    'name' => 'Number of quantitative trait loci',
-    'cv_name' => 'local',
-    'definition' => 'Total number of quantitative trait loci in a linkage map.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:Number_of_mendelian_trait_loci',
-    'name' => 'Number of mendelian trait loci',
-    'cv_name' => 'local',
-    'definition' => 'Total number of mendelian trait loci in a linkage map.',
-  ]);
-
-  $term = chado_insert_cvterm([
-    'id' => 'local:Number_of_linkage_groups',
-    'name' => 'Number of linkage groups',
-    'cv_name' => 'local',
-    'definition' => 'Total number of linkage groups in a linkage map.',
-  ]);
-
-}
-
-/**
- * Add new project_featuremap table
- */
-function carrotomics_update_7100() {
-  try {
-    carrotomics_add_table_project_featuremap();
-  }
-  catch (\PDOException $e) {
-    $error = $e->getMessage();
-    throw new DrupalUpdateException('Could not perform update: '. $error);
-  }
-}
-
-/**
- * Add new biomaterial_analysis table
- */
-function carrotomics_update_7101() {
-  try {
-    carrotomics_add_table_biomaterial_analysis();
-  }
-  catch (\PDOException $e) {
-    $error = $e->getMessage();
-    throw new DrupalUpdateException('Could not perform update: '. $error);
-  }
-}
-
-/**
- * Add new biomaterial_stock table
- */
-function carrotomics_update_7102() {
-  try {
-    carrotomics_add_table_biomaterial_stock();
-  }
-  catch (\PDOException $e) {
-    $error = $e->getMessage();
-    throw new DrupalUpdateException('Could not perform update: '. $error);
-  }
-}
-
-/**
- * Add new project_image and analysis_image tables
- */
-function carrotomics_update_7103() {
-  try {
-    carrotomics_add_table_project_image();
-    carrotomics_add_table_analysis_image();
-  }
-  catch (\PDOException $e) {
-    $error = $e->getMessage();
-    throw new DrupalUpdateException('Could not perform update: '. $error);
-  }
 }
