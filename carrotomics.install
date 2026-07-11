@@ -1,26 +1,27 @@
 <?php
+
 /**
  * @file
  * Contains functions used to install/uninstall the CarrotOmics module.
  */
 
-use Drupal\Core\Database\ConnectionNotDefinedException;
-use Drupal\Core\Database\Database;
-use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
-use Drupal\user\Entity\Role;
+#use Drupal\Core\Database\ConnectionNotDefinedException;
+#use Drupal\Core\Database\Database;
+#use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+#use Drupal\user\Entity\Role;
 
 /**
  * Implements hook_requirements().
  *
  * This hook does not support attributes and must remain procedural.
  */
-function tripal_file_requirements($phase) {
+function carrotomics_requirements($phase) {
   $requirements = [];
   if ($phase == 'install') {
-    if (version_compare(\Drupal::VERSION, 10.6) < 0) {
+    if (version_compare(\Drupal::VERSION, 11.3) < 0) {
       $requirements['carrotomics'] = [
         'title' => 'carrotomics',
-        'value' => 'ERROR: You must have Drupal version 10.6 or higher installed to use this module.',
+        'value' => 'ERROR: You must have Drupal version 11.3 or higher installed to use this module.',
         'severity' => REQUIREMENT_ERROR,
       ];
     }
@@ -29,28 +30,46 @@ function tripal_file_requirements($phase) {
 }
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  *
  * @ingroup carrotomics
  */
 function carrotomics_install() {
-  $chado = \Drupal::service('tripal_chado.database');
+  $chado_connection = \Drupal::service('tripal_chado.database');
+  $schema = $chado_connection->schema();
 
-  // Create tripal terms for the new CV terms defined in YAML files.
-  carrotomics_show_message('Adding new vocabulary terms');
-  carrotomics_create_tripal_terms();
+  // For a migrated tripal 3 site, the following terms and tables
+  // will already exist, so skip in this case.
+  if (!$schema->tableExists('analysis_image')) {
+    // Create tripal terms for the new CV terms defined in YAML files.
+    carrotomics_show_message('Adding new vocabulary terms');
+    carrotomics_create_tripal_terms();
 
-#  // Add custom tables
-#  carrotomics_add_custom_tables();
+    // Add some custom linker tables that CarrotOmics needs.
+    // These are defined in the yaml file
+    // config/other/carrotomics.custom_tables.yml.
+    carrotomics_show_message('Adding module tables');
+    \Drupal::service('carrotomics.rebuild_service')->createCustomChadoTables();
 
-  // Add the custom tables needed to associate Chado content with files.
-  carrotomics_show_message('Adding module tables');
-  \Drupal::service('carrotomics.rebuild_service')->createCustomChadoTables();
+    // Add an additional constraint to stock. CarrotOmics does not like
+    // to have uniquenames duplicated across different stock types.
+    // i.e. ALTER TABLE chado.stock ADD CONSTRAINT stock_c2 UNIQUE (uniquename)
+    // NOTE: creates "stock__c2__key" UNIQUE CONSTRAINT, btree (uniquename)
+    // and for Tripal 3 the name was "stock_c2".
+    $schema->addUniqueKey('stock', 'c2', ['uniquename']);
+  }
 
-#  // Add columns to chado.nd_geolocation table
-#  carrotomics_update_nd_geolocation();
-#  // Add various required cv terms
-#  carrotomics_add_cv_terms();
+  # // Add columns to chado.nd_geolocation table
+  # carrotomics_update_nd_geolocation();
+
+  // Associate terms with the linker tables.
+  carrotomics_show_message('Adding linker table terms');
+  carrotomics_add_linker_table_terms();
+
+  // Import new content types defined in YAML for this module.
+  carrotomics_show_message('Creating new content types: polypeptide, primer');
+  carrotomics_import_content_types();
+
 }
 
 /**
@@ -58,16 +77,26 @@ function carrotomics_install() {
  *
  * @ingroup tripal
  */
-function tripal_uninstall() {
-  // Remove configuration.
-  $config = \Drupal::service('config.factory')
-    ->getEditable('carrotomics.settings');
-  $config->delete();
+function carrotomics_uninstall() {
+print "CPU1 install uninstall called\n";//;;;
+  $chado_connection = \Drupal::service('tripal_chado.database');
+  $schema = $chado_connection->schema();
+
+  // Remove the new unique constraint added to stock.
+  $schema->dropUniqueKey('stock', 'c2');
+
+  // Delete the custom tables created by this module.
+  \Drupal::service('carrotomics.hooks')->carrotomicsUninstall();
+
+#  // Remove configuration.
+#  $config = \Drupal::service('config.factory')
+#    ->getEditable('carrotomics.settings');
+#  $config->delete();
 }
 
 /**
  * Displays a status message.
- * 
+ *
  * This handles displaying both to the UI and to drush output.
  *
  * @param string $message
@@ -97,16 +126,60 @@ function carrotomics_create_tripal_terms(): void {
 }
 
 /**
- * Add custom tables:
- *   stock_analysis, project_featuremap
+ * Adds the vocabulary terms for the linker table columns.
+ *
+ * @return void
+ *   No return value.
  */
-function carrotomics_add_custom_tables() {
-  carrotomics_add_table_stock_analysis();
-  carrotomics_add_table_biomaterial_stock();
-  carrotomics_add_table_biomaterial_analysis();
-  carrotomics_add_table_project_featuremap();
-  carrotomics_add_table_project_image();
-  carrotomics_add_table_analysis_image();
-  // CarrotOmics is more strict about stock uniquename.
-  chado_query('ALTER TABLE chado.stock ADD CONSTRAINT stock_c2 UNIQUE (uniquename)');
+function carrotomics_add_linker_table_terms(): void {
+  $storage_id = 'chado_term_mapping';
+  $core_config_id = 'core_mapping';
+  $carrotomics_config_id = 'carrotomics_mapping';
+  /** @var Drupal\Core\Config\Entity\ConfigEntityStorage $storage */
+  $storage = \Drupal::entityTypeManager()->getStorage($storage_id);
+  /** @var Drupal\tripal_chado\Entity\ChadoTermMapping $chado_core_mapping */
+  $chado_core_mapping = $storage->load($core_config_id);
+  $core_mapping_tables = $chado_core_mapping->get('tables');
+
+  // Get a keyed list to be able to determine if a table is already present.
+  $existing_tables = [];
+  foreach ($core_mapping_tables as $table) {
+    $existing_tables[$table['name']] = TRUE;
+  }
+
+  // Get the table mapping for this module.
+  $carrotomics_mapping = $storage->load($carrotomics_config_id);
+  $carrotomics_tables = $carrotomics_mapping->get('tables');
+
+  // Add table mappings from this module to core mapping.
+  $updated = FALSE;
+  foreach ($carrotomics_tables as $table) {
+    if (!isset($existing_tables[$table['name']])) {
+      $core_mapping_tables[] = $table;
+      $updated = TRUE;
+    }
+  }
+  if ($updated) {
+    $chado_core_mapping->set('tables', $core_mapping_tables);
+    $chado_core_mapping->save();
+  }
+}
+
+/**
+ * Creates content types and fields used by this module.
+ *
+ * The two new content types will be polypeptide and primer, which
+ * are in the "carrotomics" collection defined by this module.
+ *
+ * @return void
+ *   No return value.
+ */
+function carrotomics_import_content_types(): void {
+  // Import the content type collection.
+  $content_type_service = \Drupal::service('tripal.tripalentitytype_collection');
+  $content_type_service->install(['carrotomics']);
+
+  // Import the fields on the new content types.
+  $fields_service = \Drupal::service('tripal.tripalfield_collection');
+  $fields_service->install(['carrotomics']);
 }

@@ -6,16 +6,27 @@ stock_analysis:
             'not null': true
         stock_id:
             type: 'int'
+            size: 'big'
             'not null': true
         analysis_id:
             type: 'int'
+            size: 'big'
             'not null': true
+        type_id:
+            type: 'int'
+            size: 'big'
+        rank:
+            type: 'int'
+            'default': 0
     'primary key':
         - 'stock_analysis_id'
     'unique keys':
-        stock_analysis_unique_uq1:
+        stock_analysis_c1:
             - 'stock_id'
             - 'analysis_id'
+            - 'type_id'
+    'nulls not distinct':
+        stock_analysis_c1: true
     indexes:
         stock_analysis_idx1:
             - 'stock_id'
@@ -30,6 +41,12 @@ stock_analysis:
             table: 'analysis'
             columns:
                 analysis_id: 'analysis_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''
 biomaterial_analysis:
     table: 'biomaterial_analysis'
     fields:
@@ -38,16 +55,27 @@ biomaterial_analysis:
             'not null': true
         biomaterial_id:
             type: 'int'
+            size: 'big'
             'not null': true
         analysis_id:
             type: 'int'
+            size: 'big'
             'not null': true
+        type_id:
+            type: 'int'
+            size: 'big'
+        rank:
+            type: 'int'
+            'default': 0
     'primary key':
         - 'biomaterial_analysis_id'
     'unique keys':
-        biomaterial_analysis_unique_uq1:
+        biomaterial_analysis_c1:
             - 'biomaterial_id'
             - 'analysis_id'
+            - 'type_id'
+    'nulls not distinct':
+        biomaterial_analysis_c1: true
     indexes:
         biomaterial_analysis_idx1:
             - 'biomaterial_id'
@@ -62,6 +90,12 @@ biomaterial_analysis:
             table: 'analysis'
             columns:
                 analysis_id: 'analysis_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''
 biomaterial_stock:
     table: 'biomaterial_stock'
     fields:
@@ -70,16 +104,27 @@ biomaterial_stock:
             'not null': true
         biomaterial_id:
             type: 'int'
+            size: 'big'
             'not null': true
         stock_id:
             type: 'int'
+            size: 'big'
             'not null': true
+        type_id:
+            type: 'int'
+            size: 'big'
+        rank:
+            type: 'int'
+            'default': 0
     'primary key':
         - 'biomaterial_stock_id'
     'unique keys':
-        biomaterial_stock_unique_uq1:
+        biomaterial_stock_c1:
             - 'biomaterial_id'
             - 'stock_id'
+            - 'type_id'
+    'nulls not distinct':
+        biomaterial_stock_c1: true
     indexes:
         biomaterial_stock_idx1:
             - 'biomaterial_id'
@@ -94,6 +139,12 @@ biomaterial_stock:
             table: 'stock'
             columns:
                 stock_id: 'stock_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''
 project_featuremap:
     table: 'project_featuremap'
     fields:
@@ -102,16 +153,27 @@ project_featuremap:
             'not null': true
         project_id:
             type: 'int'
+            size: 'big'
             'not null': true
         featuremap_id:
             type: 'int'
+            size: 'big'
             'not null': true
+        type_id:
+            type: 'int'
+            size: 'big'
+        rank:
+            type: 'int'
+            'default': 0
     'primary key':
         - 'project_featuremap_id'
     'unique keys':
-        project_featuremap_unique_uq1:
+        project_featuremap_c1:
             - 'project_id'
             - 'featuremap_id'
+            - 'type_id'
+    'nulls not distinct':
+        project_featuremap_c1: true
     indexes:
         project_featuremap_idx1:
             - 'project_id'
@@ -126,6 +188,12 @@ project_featuremap:
             table: 'featuremap'
             columns:
                 featuremap_id: 'featuremap_id'
+        cvterm:
+            table: 'cvterm'
+            columns:
+                type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''
 project_image:
     table: 'project_image'
     fields:
@@ -134,24 +202,27 @@ project_image:
             'not null': true
         project_id:
             type: 'int'
+            size: 'big'
             'not null': true
         eimage_id:
             type: 'int'
+            size: 'big'
             'not null': true
         type_id:
             type: 'int'
-            'not null': true
+            size: 'big'
         rank:
             type: 'int'
-            'not null': true
             'default': 0
     'primary key':
         - 'project_eimage_id'
     'unique keys':
-        project_image_unique_uq1:
+        project_image_c1:
             - 'project_id'
             - 'eimage_id'
             - 'type_id'
+    'nulls not distinct':
+        project_image_c1: true
     indexes:
         project_image_idx1:
             - 'project_id'
@@ -172,6 +243,8 @@ project_image:
             table: 'cvterm'
             columns:
                 type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''
 analysis_image:
     table: 'analysis_image'
     fields:
@@ -180,24 +253,27 @@ analysis_image:
             'not null': true
         analysis_id:
             type: 'int'
+            size: 'big'
             'not null': true
         eimage_id:
             type: 'int'
+            size: 'big'
             'not null': true
         type_id:
             type: 'int'
-            'not null': true
+            size: 'big'
         rank:
             type: 'int'
-            'not null': true
             'default': 0
     'primary key':
         - 'analysis_eimage_id'
     'unique keys':
-        analysis_image_unique_uq1:
+        analysis_image_c1:
             - 'analysis_id'
             - 'eimage_id'
             - 'type_id'
+    'nulls not distinct':
+        analysis_image_c1: true
     indexes:
         analysis_image_idx1:
             - 'analysis_id'
@@ -218,3 +294,5 @@ analysis_image:
             table: 'cvterm'
             columns:
                 type_id: 'cvterm_id'
+            'on delete': 'ON DELETE SET NULL'
+            deferrable: ''

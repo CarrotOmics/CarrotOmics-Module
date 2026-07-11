@@ -1,0 +1,1048 @@
+id: 'carrotomics'
+label: 'CarrotOmics Fields'
+description: 'Default field configurations provided by the CarrotOmics module'
+dependencies:
+    module:
+        - 'carrotomics'
+    enforced:
+        module:
+            - 'carrotomics'
+fields:
+
+## Polypeptide ##
+
+    -   name: polypeptide_name
+        content_type: 'polypeptide'
+        label: Name
+        type: chado_string_type_default
+        description: The name of the item.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: name
+            max_length: 255
+        settings:
+            termIdSpace: schema
+            termAccession: name
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: polypeptide_uniquename
+        content_type: 'polypeptide'
+        label: Unique Name
+        type: chado_text_type_default
+        description: A name that uniquely identifies the polypeptide within the organism.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: uniquename
+        settings:
+            termIdSpace: data
+            termAccession: '0842'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 15
+          form:
+            default:
+              region: content
+              weight: 15
+              settings:
+                filter_format: plain_text
+                num_rows: 1
+
+    -   name: polypeptide_sequence
+        content_type: 'polypeptide'
+        label: Sequence Residues
+        type: chado_sequence_type_default
+        description: One or more molecular sequences, possibly with associated annotation.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: residues
+        settings:
+            termIdSpace: data
+            termAccession: '2044'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 20
+          form:
+            default:
+              region: content
+              weight: 20
+
+    -   name: polypeptide_length
+        content_type: 'polypeptide'
+        label: Sequence Length
+        type: chado_sequence_length_type_default
+        description: The size (length) of a sequence, subsequence or region in a sequence, or range(s) of lengths.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: seqlen
+        settings:
+            termIdSpace: data
+            termAccession: '1249'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 25
+          form:
+            default:
+              region: content
+              weight: 25
+
+    -   name: polypeptide_sequence_md5checksum
+        content_type: 'polypeptide'
+        label: Sequence MD5 Checksum
+        type: chado_sequence_checksum_type_default
+        description: The 32-character checksum of the sequence, calculated using the MD5 algorithm.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: md5checksum
+        settings:
+            termIdSpace: data
+            termAccession: '2190'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 30
+          form:
+            default:
+              region: content
+              weight: 30
+
+    -   name: polypeptide_organism
+        content_type: 'polypeptide'
+        label: Organism
+        type: chado_organism_type_default
+        description: A material entity that is an individual living system, such as animal, plant, bacteria or virus, that is capable of replicating or reproducing, growth and maintenance in the right environment. An organism may be unicellular or made up, like humans, of many billions of cells divided into specialized tissues and organs.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: organism_id
+        settings:
+            termIdSpace: OBI
+            termAccession: '0100026'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: polypeptide_type
+        content_type: 'polypeptide'
+        label: Type
+        type: chado_additional_type_type_default
+        description: An additional type for the item, typically used for adding more specific types from external vocabularies in microdata syntax. This is a relationship between something and a class that the thing is in.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                type_table: feature
+                type_column: type_id
+        settings:
+            termIdSpace: SO
+            termAccession: '0000104'
+            fixed_value: SO:0000104
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: polypeptide_relationship
+        content_type: 'polypeptide'
+        label: Relationship
+        type: chado_relationship_type_default
+        description: 'Sequence features related to this polypeptide. Think of relationship statements as sentences: SUBJECT TYPE OBJECT (e.g. "Sara (subject) is the mother of (type) Jacob (object)"). By default the current polypeptide is the subject; chose Reverse if the object is the current polypeptide.'
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: name
+                linker_table: feature_relationship
+                subject_column: subject_id
+                object_column: object_id
+        settings:
+            termIdSpace: 'SBO'
+            termAccession: '0000374'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 49
+          form:
+            default:
+              region: content
+              weight: 49
+
+    -   name: polypeptide_contact
+        content_type: 'polypeptide'
+        label: Contact
+        type: chado_contact_type_default
+        description: An individual or organization that serves as a contact for this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_contact
+                linker_fkey_column: contact_id
+        settings:
+            termIdSpace: NCIT
+            termAccession: C47954
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 80
+          form:
+            default:
+              region: content
+              weight: 80
+
+    -   name: polypeptide_pub
+        content_type: 'polypeptide'
+        label: Publication
+        type: chado_pub_type_default
+        description: Associates a publication (e.g. journal article, conference proceedings, book chapter, etc.) with this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_pub
+                linker_fkey_column: pub_id
+        settings:
+            termIdSpace: TPUB
+            termAccession: '0000002'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 82
+          form:
+            default:
+              region: content
+              weight: 82
+
+    -   name: polypeptide_project
+        content_type: 'polypeptide'
+        label: Project
+        type: chado_project_type_default
+        description: The project which this polypeptide is a part of
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: project_feature
+                linker_fkey_column: project_id
+        settings:
+            termIdSpace: NCIT
+            termAccession: C47885
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 84
+          form:
+            default:
+              region: content
+              weight: 84
+
+    -   name: polypeptide_is_analysis
+        content_type: 'polypeptide'
+        label: Is Analysis
+        type: chado_boolean_type_default
+        description: Indicates if this feature was predicted computationally using another feature.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: is_analysis
+        settings:
+            termIdSpace: local
+            termAccession: is_analysis
+            fixed_value: local:is_analysis
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 90
+          form:
+            default:
+              region: content
+              weight: 90
+
+    -   name: polypeptide_is_obsolete
+        content_type: 'polypeptide'
+        label: Is Obsolete
+        type: chado_boolean_type_default
+        description: Indicates if this record is obsolete.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: is_obsolete
+        settings:
+            termIdSpace: local
+            termAccession: is_obsolete
+            fixed_value: local:is_obsolete
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 98
+          form:
+            default:
+              region: content
+              weight: 98
+
+    -   name: polypeptide_timeaccessioned
+        content_type: 'polypeptide'
+        label: Time Accessioned
+        type: chado_datetime_type_default
+        description: The date and time at which this record was first added to the database.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: timeaccessioned
+        settings:
+            termIdSpace: local
+            termAccession: timeaccessioned
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 100
+              settings:
+                hide_condition: 'if_value'
+                hide_value: '-infinity'
+          form:
+            default:
+              region: content
+              weight: 100
+
+    -   name: polypeptide_timelastmodified
+        content_type: 'polypeptide'
+        label: Time Last Modified
+        type: chado_datetime_type_default
+        description: The date and time at which this record was last modified.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: timelastmodified
+        settings:
+            termIdSpace: local
+            termAccession: timelastmodified
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 102
+              settings:
+                hide_condition: 'if_value'
+                hide_value: '-infinity'
+          form:
+            default:
+              region: content
+              weight: 102
+
+    -   name: polypeptide_synonym
+        content_type: 'polypeptide'
+        label: Synonyms
+        type: chado_synonym_type_default
+        description: Alternate names, aliases or synonyms for this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_synonym
+                linker_fkey_column: feature_id
+        settings:
+            termIdSpace: schema
+            termAccession: alternateName
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 66
+          form:
+            default:
+              region: content
+              weight: 66
+
+    -   name: polypeptide_dbxref
+        content_type: 'polypeptide'
+        label: Primary Database Reference
+        type: chado_dbxref_type_default
+        description: The ID where this record may be available in an external online database.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: dbxref_id
+        settings:
+            termIdSpace: SBO
+            termAccession: '0000554'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 68
+          form:
+            default:
+              region: content
+              weight: 68
+
+    -   name: polypeptide_dbxref_ann
+        content_type: 'polypeptide'
+        label: Database Reference Annotations
+        type: chado_dbxref_type_default
+        description: The IDs where this record may be available in other external online databases.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_dbxref
+                linker_fkey_column: dbxref_id
+        settings:
+            termIdSpace: SBO
+            termAccession: '0000552'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 68
+          form:
+            default:
+              region: content
+              weight: 68
+
+    -   name: polypeptide_sequence_coordinates
+        content_type: 'polypeptide'
+        label: Sequence Coordinates
+        type: chado_sequence_coordinates_default
+        description: Locations on reference sequences where the feature is located.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: featureloc
+                linker_fkey_column: feature_id
+        settings:
+            termIdSpace: data
+            termAccession: '2012'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+## Primer ##
+
+    -   name: primer_name
+        content_type: 'primer'
+        label: Name
+        type: chado_string_type_default
+        description: The name of the item.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: name
+            max_length: 255
+        settings:
+            termIdSpace: schema
+            termAccession: name
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: primer_uniquename
+        content_type: 'primer'
+        label: Unique Name
+        type: chado_text_type_default
+        description: A name that uniquely identifies the primer within the organism.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: uniquename
+        settings:
+            termIdSpace: data
+            termAccession: '0842'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 15
+          form:
+            default:
+              region: content
+              weight: 15
+              settings:
+                filter_format: plain_text
+                num_rows: 1
+
+    -   name: primer_sequence
+        content_type: 'primer'
+        label: Sequence Residues
+        type: chado_sequence_type_default
+        description: One or more molecular sequences, possibly with associated annotation.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: residues
+        settings:
+            termIdSpace: data
+            termAccession: '2044'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 20
+          form:
+            default:
+              region: content
+              weight: 20
+
+    -   name: primer_length
+        content_type: 'primer'
+        label: Sequence Length
+        type: chado_sequence_length_type_default
+        description: The size (length) of a sequence, subsequence or region in a sequence, or range(s) of lengths.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: seqlen
+        settings:
+            termIdSpace: data
+            termAccession: '1249'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 25
+          form:
+            default:
+              region: content
+              weight: 25
+
+    -   name: primer_sequence_md5checksum
+        content_type: 'primer'
+        label: Sequence MD5 Checksum
+        type: chado_sequence_checksum_type_default
+        description: The 32-character checksum of the sequence, calculated using the MD5 algorithm.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: md5checksum
+        settings:
+            termIdSpace: data
+            termAccession: '2190'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 30
+          form:
+            default:
+              region: content
+              weight: 30
+
+    -   name: primer_organism
+        content_type: 'primer'
+        label: Organism
+        type: chado_organism_type_default
+        description: A material entity that is an individual living system, such as animal, plant, bacteria or virus, that is capable of replicating or reproducing, growth and maintenance in the right environment. An organism may be unicellular or made up, like humans, of many billions of cells divided into specialized tissues and organs.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: organism_id
+        settings:
+            termIdSpace: OBI
+            termAccession: '0100026'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: primer_type
+        content_type: 'primer'
+        label: Type
+        type: chado_additional_type_type_default
+        description: An additional type for the item, typically used for adding more specific types from external vocabularies in microdata syntax. This is a relationship between something and a class that the thing is in.
+        cardinality: 1
+        required: true
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                type_table: feature
+                type_column: type_id
+        settings:
+            termIdSpace: SO
+            termAccession: '0000112'
+            fixed_value: SO:0000112
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10
+
+    -   name: primer_relationship
+        content_type: 'primer'
+        label: Relationship
+        type: chado_relationship_type_default
+        description: 'Sequence features related to this primer. Think of relationship statements as sentences: SUBJECT TYPE OBJECT (e.g. "Sara (subject) is the mother of (type) Jacob (object)"). By default the current primer is the subject; chose Reverse if the object is the current primer.'
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: name
+                linker_table: feature_relationship
+                subject_column: subject_id
+                object_column: object_id
+        settings:
+            termIdSpace: 'SBO'
+            termAccession: '0000374'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 49
+          form:
+            default:
+              region: content
+              weight: 49
+
+    -   name: primer_contact
+        content_type: 'primer'
+        label: Contact
+        type: chado_contact_type_default
+        description: An individual or organization that serves as a contact for this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_contact
+                linker_fkey_column: contact_id
+        settings:
+            termIdSpace: NCIT
+            termAccession: C47954
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 80
+          form:
+            default:
+              region: content
+              weight: 80
+
+    -   name: primer_pub
+        content_type: 'primer'
+        label: Publication
+        type: chado_pub_type_default
+        description: Associates a publication (e.g. journal article, conference proceedings, book chapter, etc.) with this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_pub
+                linker_fkey_column: pub_id
+        settings:
+            termIdSpace: TPUB
+            termAccession: '0000002'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 82
+          form:
+            default:
+              region: content
+              weight: 82
+
+    -   name: primer_project
+        content_type: 'primer'
+        label: Project
+        type: chado_project_type_default
+        description: The project which this primer is a part of
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: project_feature
+                linker_fkey_column: project_id
+        settings:
+            termIdSpace: NCIT
+            termAccession: C47885
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 84
+          form:
+            default:
+              region: content
+              weight: 84
+
+    -   name: primer_is_analysis
+        content_type: 'primer'
+        label: Is Analysis
+        type: chado_boolean_type_default
+        description: Indicates if this feature was predicted computationally using another feature.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: is_analysis
+        settings:
+            termIdSpace: local
+            termAccession: is_analysis
+            fixed_value: local:is_analysis
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 90
+          form:
+            default:
+              region: content
+              weight: 90
+
+    -   name: primer_is_obsolete
+        content_type: 'primer'
+        label: Is Obsolete
+        type: chado_boolean_type_default
+        description: Indicates if this record is obsolete.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: is_obsolete
+        settings:
+            termIdSpace: local
+            termAccession: is_obsolete
+            fixed_value: local:is_obsolete
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 98
+          form:
+            default:
+              region: content
+              weight: 98
+
+    -   name: primer_timeaccessioned
+        content_type: 'primer'
+        label: Time Accessioned
+        type: chado_datetime_type_default
+        description: The date and time at which this record was first added to the database.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: timeaccessioned
+        settings:
+            termIdSpace: local
+            termAccession: timeaccessioned
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 100
+              settings:
+                hide_condition: 'if_value'
+                hide_value: '-infinity'
+          form:
+            default:
+              region: content
+              weight: 100
+
+    -   name: primer_timelastmodified
+        content_type: 'primer'
+        label: Time Last Modified
+        type: chado_datetime_type_default
+        description: The date and time at which this record was last modified.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: timelastmodified
+        settings:
+            termIdSpace: local
+            termAccession: timelastmodified
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 102
+              settings:
+                hide_condition: 'if_value'
+                hide_value: '-infinity'
+          form:
+            default:
+              region: content
+              weight: 102
+
+    -   name: primer_synonym
+        content_type: 'primer'
+        label: Synonyms
+        type: chado_synonym_type_default
+        description: Alternate names, aliases or synonyms for this record.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_synonym
+                linker_fkey_column: feature_id
+        settings:
+            termIdSpace: schema
+            termAccession: alternateName
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 66
+          form:
+            default:
+              region: content
+              weight: 66
+
+    -   name: primer_dbxref
+        content_type: 'primer'
+        label: Primary Database Reference
+        type: chado_dbxref_type_default
+        description: The ID where this record may be available in an external online database.
+        cardinality: 1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                base_column: dbxref_id
+        settings:
+            termIdSpace: SBO
+            termAccession: '0000554'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 68
+          form:
+            default:
+              region: content
+              weight: 68
+
+    -   name: primer_dbxref_ann
+        content_type: 'primer'
+        label: Database Reference Annotations
+        type: chado_dbxref_type_default
+        description: The IDs where this record may be available in other external online databases.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: feature_dbxref
+                linker_fkey_column: dbxref_id
+        settings:
+            termIdSpace: SBO
+            termAccession: '0000552'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 68
+          form:
+            default:
+              region: content
+              weight: 68
+
+    -   name: primer_sequence_coordinates
+        content_type: 'primer'
+        label: Sequence Coordinates
+        type: chado_sequence_coordinates_default
+        description: Locations on reference sequences where the feature is located.
+        cardinality: -1
+        required: false
+        storage_settings:
+            storage_plugin_id: chado_storage
+            storage_plugin_settings:
+                base_table: feature
+                linker_table: featureloc
+                linker_fkey_column: feature_id
+        settings:
+            termIdSpace: data
+            termAccession: '2012'
+        display:
+          view:
+            default:
+              region: content
+              label: above
+              weight: 10
+          form:
+            default:
+              region: content
+              weight: 10

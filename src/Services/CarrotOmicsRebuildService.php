@@ -99,11 +99,13 @@ class CarrotOmicsRebuildService {
     if (!$chado_schema_name) {
       $chado_schema_name = $this->chado_connection->getSchemaName();
     }
+print "CPU4 drop tables in schema \"$chado_schema_name\"\n";//;;;
     $config = __DIR__ . '/../../config/other/carrotomics.custom_tables.yml';
     $table_schemas = Yaml::parseFile($config);
     // Drop tables in reverse order of how they were created.
     $table_schemas = array_reverse($table_schemas);
     foreach (array_keys($table_schemas) as $table_name) {
+print "CPU5 drop table \"$table_name\"\n";//;;;
       $customTable = new ChadoCustomTable($table_name, $chado_schema_name);
       $existing_schema = $customTable->getTableSchema();
       if ($existing_schema) {

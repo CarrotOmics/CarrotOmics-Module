@@ -1,0 +1,28 @@
+id: 'carrotomics'
+label: 'CarrotOmics Content Types'
+description: 'Content types added by the CarrotOmics module'
+dependencies:
+    module:
+        - 'carrotomics'
+    enforced:
+        module:
+            - 'carrotomics'
+content_types:
+    -   label: 'Polypeptide'
+        term: 'SO:0000104'
+        help_text: 'A sequence of amino acids linked by peptide bonds'
+        category: 'CarrotOmics'
+        id: 'polypeptide'
+        title_format: '[polypeptide_name]'
+        url_format: 'polypeptide/[TripalEntity__entity_id]'
+        settings:
+            chado_base_table: 'feature'
+    -   label: 'Primer'
+        term: 'SO:0000112'
+        help_text: 'An oligo to which new deoxyribonucleotides can be added by DNA polymerase.'
+        category: 'CarrotOmics'
+        id: 'primer'
+        title_format: '[primer_name]'
+        url_format: 'primer/[TripalEntity__entity_id]'
+        settings:
+            chado_base_table: 'feature'

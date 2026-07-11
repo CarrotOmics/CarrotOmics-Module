@@ -13,8 +13,8 @@ vocabularies:
         url: 'https://sio.semanticscience.org/'
         idSpaces:
             -   name: 'SIO'
-                description: "Semanticscience Integrated Ontology"
-                urlPrefix: "https://semanticscience.org/resource/{db}_{accession}"
+                description: 'Semanticscience Integrated Ontology'
+                urlPrefix: 'https://semanticscience.org/resource/{db}_{accession}'
         terms:
             -   id: 'SIO:000013'
                 name: 'geographic position'
