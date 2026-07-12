@@ -1,0 +1,18 @@
+# -- The root CarrotOmics administration menu item.
+carrotomics.admin:
+  route_name: 'carrotomics.admin'
+  title: 'CarrotOmics'
+  description: 'The core administrative menu for CarrotOmics'
+  parent: 'system.admin'
+  options:
+    icon:
+      pack_id: 'carrotomics'
+      icon_id: 'carrotomics-menu-icon'
+
+# -- Tripal content link on Drupal content administration menu.
+entity.carrotomics_entity.collection:
+  title: 'TEST Content'
+  route_name: 'entity.tripal_entity.collection'
+  description: 'TESTING'
+  parent: 'carrotomics.admin'
+  weight: 100
