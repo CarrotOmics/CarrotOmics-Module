@@ -1,0 +1,16 @@
+.carrotomics-admin-link-button {
+  display: inline-block;
+  padding: 0px 8px;
+  background-color: #fdae6b; /* Button color */
+  color: black;              /* Text color */
+  text-decoration: none;     /* Removes the default underline */
+  border-radius: 4px;        /* Rounds the corners */
+  font-weight: bold;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+/* Changes the color slightly when hovered */
+.carrotomics-admin-link-button:hover {
+  background-color: #fd8d3c;
+}
