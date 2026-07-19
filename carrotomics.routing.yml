@@ -10,3 +10,13 @@ carrotomics.admin:
     _title: 'CarrotOmics'
   requirements:
     _permission: 'administer tripal'
+
+# Publication tools.
+carrotomics.admin.pub_form:
+  path: '/admin/carrotomics/pub'
+  defaults:
+    _form: 'Drupal\carrotomics\Form\CarrotOmicsAdminPub'
+#    _form: 'Drupal\carrotomics\Services\CarrotOmicsRebuildService'
+    _title: 'Publication Tools'
+  requirements:
+    _permission: 'administer tripal'

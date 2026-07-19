@@ -11,8 +11,8 @@ carrotomics.admin:
 
 # -- Tripal content link on Drupal content administration menu.
 entity.carrotomics_entity.collection:
-  title: 'TEST Content'
-  route_name: 'entity.tripal_entity.collection'
-  description: 'TESTING'
+  title: 'Publication Tools'
+  route_name: 'carrotomics.admin.pub_form'
+  description: 'Tools to manage publications in chado'
   parent: 'carrotomics.admin'
   weight: 100
