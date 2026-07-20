@@ -70,6 +70,10 @@ function carrotomics_install() {
   carrotomics_show_message('Creating new content types: polypeptide, primer');
   carrotomics_import_content_types();
 
+  // Import chado records required for CarrotOmics.
+  // @todo chado.db insert GRINTaxon | The Germplasm Resources Information Network (GRIN) Taxonomy Database
+  // | https://npgsweb.ars-grin.gov/gringlobal/taxonomydetail.aspx?id={accession}
+  // | https://npgsweb.ars-grin.gov/gringlobal/taxon/abouttaxonomy.aspx |.
 }
 
 /**

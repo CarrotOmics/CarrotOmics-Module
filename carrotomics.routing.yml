@@ -11,6 +11,15 @@ carrotomics.admin:
   requirements:
     _permission: 'administer tripal'
 
+# Validation tools.
+carrotomics.admin.validate_form:
+  path: '/admin/carrotomics/validate'
+  defaults:
+    _form: 'Drupal\carrotomics\Form\CarrotOmicsAdminValidate'
+    _title: 'SQL Tools'
+  requirements:
+    _permission: 'administer tripal'
+
 # Publication tools.
 carrotomics.admin.pub_form:
   path: '/admin/carrotomics/pub'
@@ -20,7 +29,16 @@ carrotomics.admin.pub_form:
   requirements:
     _permission: 'administer tripal'
 
-# Publication tools.
+# Data export.
+carrotomics.admin.export_form:
+  path: '/admin/carrotomics/export'
+  defaults:
+    _form: 'Drupal\carrotomics\Form\CarrotOmicsAdminExport'
+    _title: 'Data Export'
+  requirements:
+    _permission: 'administer tripal'
+
+# SQL tools.
 carrotomics.admin.sql_form:
   path: '/admin/carrotomics/sql'
   defaults:

@@ -282,7 +282,9 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
     elseif ($triggering_element == 'merge_pub_btn') {
       [$nerrors, $status] = $this->mergePublications($min_pub_id);
-      $this->returnFile('Duplicate Publications', $form_state);
+      if ($nerrors != -1) {
+        $this->returnFile('Duplicate Publications', $form_state);
+      }
     }
     elseif ($triggering_element == 'unlinked_pub_btn') {
       [$nerrors, $status] = $this->unlinkedPub();
@@ -294,7 +296,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
     }
     $form_state->setStorage(['results' => $status]);
-    if ($nerrors) {
+    if ($nerrors > 0) {
       $this->messenger()->addError($nerrors . ' errors');
     }
   }
@@ -968,10 +970,10 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     $this->logger->notice('mergePublications: @nfound publications may need to be merged',
       ['@nfound' => $nfound]);
     // When we return a file to download as the response, no message will be
-    // displayed. Returning this message as an error will indicate to not
-    // return the empty file.
+    // displayed. Returning this message as a negative error will indicate to
+    // not return the empty file.
     if (!$nfound) {
-      return [1, "There were no publications found that are candidates for merging"];
+      return [-1, "There were no publications found that are candidates for merging"];
     }
   }
 
