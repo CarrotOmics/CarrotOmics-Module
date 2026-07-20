@@ -8,6 +8,7 @@ use Drupal\pgsql\Driver\Database\pgsql\Connection;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalEntityLookup;
 use Drupal\tripal\Services\TripalLogger;
+use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -46,6 +47,13 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
   protected TripalLogger $logger;
 
   /**
+   * The publish manager service.
+   *
+   * @var Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager
+   */
+  protected TripalBackendPublishManager $publish_manager;
+
+  /**
    * A temporary file used when returning data.
    *
    * @var string
@@ -63,7 +71,7 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
    * A list of publications that we have updated.
    *
    * Use the array keys to store the pub_id values to republish to
-   * eliminate the possibility of duplicates. Values are ignored.
+   * eliminate the possibility of duplicates. Value is the bundle.
    *
    * @var array
    */
@@ -79,11 +87,13 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
     ChadoConnection $chado_connection,
     TripalEntityLookup $entity_lookup_manager,
     TripalLogger $logger,
+    TripalBackendPublishManager $publish_manager,
   ) {
     $this->drupal_connection = $drupal_connection;
     $this->chado_connection = $chado_connection;
     $this->entity_lookup_manager = $entity_lookup_manager;
     $this->logger = $logger;
+    $this->publish_manager = $publish_manager;
   }
 
   /**
@@ -95,6 +105,7 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
       $container->get('tripal_chado.database'),
       $container->get('tripal.tripal_entity.lookup'),
       $container->get('tripal.logger'),
+      $container->get('tripal.backend_publish'),
     );
   }
 
@@ -157,10 +168,37 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
   }
 
   /**
+   * Looks up the bundle and entity_id of a record.
+   *
+   * @param string $base_table
+   *   The chado table name, e.g. 'feature'.
+   * @param int $record_id
+   *   A pkey value for a chado table.
+   *
+   * @return array
+   *   Returns [bundle, entity_id] or empty array if no entity.
+   */
+  protected function getBundleAndEntity(string $base_table, int $record_id): array {
+    $result = [];
+    // The following is cached in the lookup manager.
+    $bundle_ids = $this->entity_lookup_manager->getBundles($base_table);
+    if ($bundle_ids) {
+      foreach ($bundle_ids as $bundle_id) {
+        $entity_ids = $this->entity_lookup_manager->getEntityIdFromRecordId($record_id, $bundle_id, 'tripal_entity');
+        if ($entity_ids) {
+          $result = [$bundle_id, reset($entity_ids)];
+          break;
+        }
+      }
+    }
+    return $result;
+  }
+
+  /**
    * Generates a link to an entity styled as a button.
    *
-   * @param string $bundle
-   *   The bundle ID, e.g. 'pub'.
+   * @param string $base_table
+   *   The chado table name, e.g. 'pub'.
    * @param int $record_id
    *   A pkey value for a chado table.
    * @param bool|null $add_arrow
@@ -169,8 +207,8 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
    * @return string
    *   HTML for the button.
    */
-  protected function entityLink(string $bundle, int $record_id, ?bool $add_arrow = TRUE): string {
-    $entity_id = $this->entity_lookup_manager->getEntityId($record_id, NULL, NULL, $bundle);
+  protected function entityLink(string $base_table, int $record_id, ?bool $add_arrow = TRUE): string {
+    $entity_id = $this->entity_lookup_manager->getEntityId($record_id, NULL, NULL, $base_table);
     $link = '<a class="carrotomics-admin-link-button" href="/bio_data/' . $entity_id . '">' . $record_id . '</a>';
     if ($add_arrow) {
       $link .= ' ⟶ ';
@@ -181,34 +219,32 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
   /**
    * Republishes any updated records.
    *
-   * The list of records to republish is stored as the array keys in the
-   * class variable $this->needs_republishing.
-   *
-   * @param string $bundle
-   *   The name of the bundle to republish, defaults to "pub".
-   * @param string|null $datastore
-   *   The name of the bundle to republish, defaults to "chado_storage".
+   * The list of records to republish is stored in the class variable
+   * $this->needs_republishing as the array keys under the bundle key.
    *
    * @return void
    *   No return value.
    */
-  protected function republish(string $bundle, string $datastore = 'chado_storage'): void {
+  protected function republish(): void {
     // @todo if there are many records, launch as a job.
     if ($this->needs_republishing) {
+      $datastore = 'chado_storage';
       $publish_instance = $this->publish_manager->createInstance($datastore);
       $schema_name = $this->config_factory->get('tripal_chado.settings')->get('default_schema');
-      $publish_options = [
-        'record_ids' => array_keys($this->needs_republishing),
-        'schema_name' => $schema_name,
-        'batch_size' => 100,
-        'republish' => TRUE,
-        'migration-file' => NULL,
-        'lenient-migration' => NULL,
-        'bundle' => $bundle,
-        'datastore' => $datastore,
-        'job' => NULL,
-      ];
-      $publish_instance->publish($publish_options);
+      foreach ($this->needs_republishing as $bundle => $records) {
+        $publish_options = [
+          'record_ids' => array_keys($records),
+          'schema_name' => $schema_name,
+          'batch_size' => 100,
+          'republish' => TRUE,
+          'migration-file' => NULL,
+          'lenient-migration' => NULL,
+          'bundle' => $bundle,
+          'datastore' => $datastore,
+          'job' => NULL,
+        ];
+        $publish_instance->publish($publish_options);
+      }
       $this->needs_republishing = [];
     }
   }

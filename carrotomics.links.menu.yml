@@ -9,10 +9,16 @@ carrotomics.admin:
       pack_id: 'carrotomics'
       icon_id: 'carrotomics-menu-icon'
 
-# -- Tripal content link on Drupal content administration menu.
-entity.carrotomics_entity.collection:
+carrotomics.admin.pub_form:
   title: 'Publication Tools'
   route_name: 'carrotomics.admin.pub_form'
   description: 'Tools to manage publications in chado'
+  parent: 'carrotomics.admin'
+  weight: 100
+
+carrotomics.admin.sql_form:
+  title: 'SQL Tools'
+  route_name: 'carrotomics.admin.sql_form'
+  description: 'Tools to manage records in chado'
   parent: 'carrotomics.admin'
   weight: 100

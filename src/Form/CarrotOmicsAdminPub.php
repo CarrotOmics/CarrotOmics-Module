@@ -25,13 +25,6 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
   protected ConfigFactory $config_factory;
 
   /**
-   * The publish manager service.
-   *
-   * @var Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager
-   */
-  protected TripalBackendPublishManager $publish_manager;
-
-  /**
    * The Tripal Citation generation service.
    *
    * @var Drupal\tripal\Services\TripalCitationManager
@@ -55,13 +48,12 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     ChadoConnection $chado_connection,
     TripalEntityLookup $entity_lookup_manager,
     TripalLogger $logger,
-    ConfigFactory $config_factory,
     TripalBackendPublishManager $publish_manager,
+    ConfigFactory $config_factory,
     TripalCitationManager $citation_manager,
   ) {
-    parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger);
+    parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
     $this->config_factory = $config_factory;
-    $this->publish_manager = $publish_manager;
     $this->citation_manager = $citation_manager;
   }
 
@@ -74,8 +66,8 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
       $container->get('tripal_chado.database'),
       $container->get('tripal.tripal_entity.lookup'),
       $container->get('tripal.logger'),
-      $container->get('config.factory'),
       $container->get('tripal.backend_publish'),
+      $container->get('config.factory'),
       $container->get('tripal.citation'),
     );
   }
@@ -452,7 +444,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
               $nadded++;
               $this->logger->notice('addDoiUrl: pub_id=@pub_id inserted new URL property "@url" pubprop_id=@pkey',
                 ['@pub_id' => $pub_id, '@url' => $url, '@pkey' => $pkey]);
-              $this->needs_republishing[$pub_id] = TRUE;
+              $this->needs_republishing['pub'][$pub_id] = TRUE;
             }
             else {
               $nerrors++;
@@ -471,7 +463,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     $errors = $this->flattenErrors($errors);
     $status = $this->t('Added @nadded URLs, @nerrors errors', ['@nadded' => $nadded, '@nerrors' => $nerrors]);
@@ -529,7 +521,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
               $nchanged += $count;
               $this->logger->notice('abstractUrl: pub_id=@pub_id added href link to abstract',
                 ['@pub_id' => $pub_id]);
-              $this->needs_republishing[$pub_id] = TRUE;
+              $this->needs_republishing['pub'][$pub_id] = TRUE;
             }
             else {
               $nerrors++;
@@ -543,7 +535,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     $errors = $this->flattenErrors($errors);
     $status = $this->t('Updated @nchanged abstracts, @nerrors errors',
@@ -600,7 +592,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     $status = $this->t('@nokay value checks were okay, added @npropadded values to chado.pubprop, added @nadded values to chado.pub, @nerrors errors',
       [
@@ -661,7 +653,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
             $stats['npropadded']++;
             $this->logger->notice('pubPubProp: pub_id=@pub_id inserted new property type "@type" value "@value"',
               ['@pub_id' => $pub_id, '@type' => $column, '@value' => $property_value]);
-            $this->needs_republishing[$pub_id] = TRUE;
+            $this->needs_republishing['pub'][$pub_id] = TRUE;
           }
           else {
             $stats['nerrors']++;
@@ -711,7 +703,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
               $stats['nadded']++;
               $this->logger->notice('pubPubProp: pub_id=@pub_id copied property "@value" to pub table column "@column"',
                 ['@pub_id' => $pub_id, '@value' => $property_value, '@column' => $column]);
-              $this->needs_republishing[$pub_id] = TRUE;
+              $this->needs_republishing['pub'][$pub_id] = TRUE;
             }
             else {
               $stats['nerror']++;
@@ -1141,8 +1133,8 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
                 $nadded++;
                 $outputmessages[] = 'Linked publication ' . $this->entityLink('pub', $pub_id)
                                 . $this->entityLink('pub', $orig_pub_id[0], FALSE);
-                $this->needs_republishing[$pub_id] = TRUE;
-                $this->needs_republishing[$orig_pub_id[0]] = TRUE;
+                $this->needs_republishing['pub'][$pub_id] = TRUE;
+                $this->needs_republishing['pub'][$orig_pub_id[0]] = TRUE;
               }
               else {
                 $nerrors++;
@@ -1161,7 +1153,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     if ($outputmessages) {
       return [
@@ -1213,7 +1205,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
         $pubprop_id = $query2->execute();
         if ($pubprop_id) {
           $ninserted++;
-          $this->needs_republishing[$pub->pub_id] = TRUE;
+          $this->needs_republishing['pub'][$pub->pub_id] = TRUE;
         }
         else {
           $nerrors++;
@@ -1325,7 +1317,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     // Flatten errors array to string.
     $errors = $this->flattenErrors($errors);
@@ -1374,7 +1366,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
           $this->logger->notice('dropEmptyProperties: Dropped pub_id=@pub_id pubprop_id=@pp_id term=@term',
             ['@pub_id' => $obj->pub_id, '@pp_id' => $obj->pubprop_id, '@term' => $obj->name]);
           $ndropped[$cvtermname] = ($ndropped[$cvtermname] ?? 0) + 1;
-          $this->needs_republishing[$obj->pub_id] = TRUE;
+          $this->needs_republishing['pub'][$obj->pub_id] = TRUE;
         }
         else {
           $nerrors++;
@@ -1391,7 +1383,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     }
 
     // This will republish if we indicated any updates.
-    $this->republish('pub');
+    $this->republish();
 
     if ($ndropped or $nerrors) {
       $status = '';
