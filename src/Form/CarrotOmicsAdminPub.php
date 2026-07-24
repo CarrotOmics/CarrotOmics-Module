@@ -18,13 +18,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
 
   /**
-   * Drupal configuration service.
-   *
-   * @var Drupal\Core\Config\ConfigFactory
-   */
-  protected ConfigFactory $config_factory;
-
-  /**
    * The Tripal Citation generation service.
    *
    * @var Drupal\tripal\Services\TripalCitationManager
@@ -44,16 +37,15 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
    * Prepares injected services.
    */
   public function __construct(
+    ConfigFactory $config_factory,
     Connection $drupal_connection,
     ChadoConnection $chado_connection,
     TripalEntityLookup $entity_lookup_manager,
     TripalLogger $logger,
     TripalBackendPublishManager $publish_manager,
-    ConfigFactory $config_factory,
     TripalCitationManager $citation_manager,
   ) {
     parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
-    $this->config_factory = $config_factory;
     $this->citation_manager = $citation_manager;
   }
 
@@ -62,12 +54,12 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
+      $container->get('config.factory'),
       $container->get('database'),
       $container->get('tripal_chado.database'),
       $container->get('tripal.tripal_entity.lookup'),
       $container->get('tripal.logger'),
       $container->get('tripal.backend_publish'),
-      $container->get('config.factory'),
       $container->get('tripal.citation'),
     );
   }

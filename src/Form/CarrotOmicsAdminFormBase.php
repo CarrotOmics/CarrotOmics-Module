@@ -2,6 +2,7 @@
 
 namespace Drupal\carrotomics\Form;
 
+use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\pgsql\Driver\Database\pgsql\Connection;
@@ -17,6 +18,13 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
  * Provides the user interface for CarrotOmics publication tools.
  */
 abstract class CarrotOmicsAdminFormBase extends FormBase {
+
+  /**
+   * Drupal configuration service.
+   *
+   * @var Drupal\Core\Config\ConfigFactory
+   */
+  protected ConfigFactory $config_factory;
 
   /**
    * A database connection to the drupal public schema.
@@ -83,12 +91,14 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
    * Prepares injected services.
    */
   public function __construct(
+    ConfigFactory $config_factory,
     Connection $drupal_connection,
     ChadoConnection $chado_connection,
     TripalEntityLookup $entity_lookup_manager,
     TripalLogger $logger,
     TripalBackendPublishManager $publish_manager,
   ) {
+    $this->config_factory = $config_factory;
     $this->drupal_connection = $drupal_connection;
     $this->chado_connection = $chado_connection;
     $this->entity_lookup_manager = $entity_lookup_manager;
@@ -101,6 +111,7 @@ abstract class CarrotOmicsAdminFormBase extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
+      $container->get('config.factory'),
       $container->get('database'),
       $container->get('tripal_chado.database'),
       $container->get('tripal.tripal_entity.lookup'),

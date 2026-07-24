@@ -2,6 +2,7 @@
 
 namespace Drupal\carrotomics\Form;
 
+use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\File\FileSystem;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\pgsql\Driver\Database\pgsql\Connection;
@@ -29,6 +30,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
    * Prepares injected services.
    */
   public function __construct(
+    ConfigFactory $config_factory,
     Connection $drupal_connection,
     ChadoConnection $chado_connection,
     TripalEntityLookup $entity_lookup_manager,
@@ -45,6 +47,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
+      $container->get('config.factory'),
       $container->get('database'),
       $container->get('tripal_chado.database'),
       $container->get('tripal.tripal_entity.lookup'),
