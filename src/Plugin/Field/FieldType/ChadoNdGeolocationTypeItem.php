@@ -113,8 +113,6 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     $storage_settings['storage_plugin_settings']['linker_table'] = '';
     $storage_settings['storage_plugin_settings']['linker_fkey_column'] = '';
     $storage_settings['storage_plugin_settings']['object_table'] = self::$object_table;
-    // @todo this should be a formatter setting! We use this for number of decimal places.
-    $storage_settings['max_length'] = 4;
     return $storage_settings;
   }
 
@@ -123,17 +121,6 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
    */
   public function storageSettingsForm(array &$form, FormStateInterface $form_state, $has_data) {
     $elements = parent::storageSettingsForm($form, $form_state, $has_data);
-
-    // @todo move to formatter settings!
-    $elements['max_length'] = [
-      '#type' => 'number',
-      '#title' => t('Decimal places'),
-      '#default_value' => $this->getSetting('max_length'),
-      '#required' => FALSE,
-      '#description' => t('The number of decimal places to display.'),
-      '#min' => 0,
-    ];
-
     return $elements;
   }
 
@@ -151,10 +138,6 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     if (!$base_table) {
       return;
     }
-
-    // @todo moves to formatter settings.
-    // Retrieve any additional settings.
-    $decimal_places = $field_definition->getSetting('max_length');
 
     // Get the various tables and columns needed for this field.
     // We will get the terms by using the Chado table columns they map to.
@@ -183,10 +166,11 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     $linker_fkey_term = self::getColumnTermId($linker_table, $linker_fkey_column, self::$record_id_term);
     $linker_type_id_term = self::getColumnTermId($linker_table, 'type_id', 'schema:additionalType');
 
-    // Cvterm table, to retrieve the name for the linker type.
+    // Cvterm table, to retrieve the name for the linker
+    // and nd_experiment types.
     $cvterm_schema_def = self::getChadoTableDef('cvterm', $schema);
     $cvterm_name_term = self::getColumnTermId('cvterm', 'name', 'schema:name');
-    $linker_type_id_len = $cvterm_schema_def['fields']['name']['size'];
+    $type_id_len = $cvterm_schema_def['fields']['name']['size'];
 
     // Final table, nd_geolocation, is invariant so it is hard-coded.
     $nd_geolocation_schema_def = self::getChadoTableDef('nd_geolocation', $schema);
@@ -248,7 +232,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
       'path' => $linker_table . '.type_id',
       'as' => 'linker_type_id',
     ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $linker_type_id_len, [
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $type_id_len, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.type_id>cvterm.cvterm_id;name',
@@ -272,6 +256,20 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
       . $linker_table . '.nd_experiment>nd_experiment.nd_experiment_id',
     ]);
 
+    // The nd_experiment table also has a type.
+    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type_id', self::$record_id_term, [
+      'action' => 'store',
+      'drupal_store' => FALSE,
+      'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;type_id',
+      'as' => 'nd_exp_type_id',
+    ]);
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type', $linker_type_id_term, $type_id_len, [
+      'action' => 'read_value',
+      'drupal_store' => FALSE,
+      'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;nd_experiment.type_id>cvterm.cvterm_id;name',
+      'as' => 'nd_exp_type',
+    ]);
+
     // Define the link between the base table and the nd_geolocation table.
     $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_geolocation', $linker_left_term, [
       'action' => 'store_link',
@@ -290,41 +288,41 @@ if (1) {
 }
 
     // The various values from the nd_geolocation table.
-    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_latitude', $latitude_term, [
+    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_lat', $latitude_term, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;latitude',
-      'as' => 'nd_geo_latitude',
+      'as' => 'nd_geo_lat',
     ]);
-    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_longitude', $longitude_term, [
+    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_lon', $longitude_term, [
 #      'action' => 'read_value',
       'action' => 'store',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;longitude',
-      'as' => 'nd_geo_longitude',
+      'as' => 'nd_geo_lon',
     ]);
-    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_altitude', $altitude_term, [
+    $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_alt', $altitude_term, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;altitude',
-      'as' => 'nd_geo_altitude',
+      'as' => 'nd_geo_alt',
     ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_geo_geodetic_datum', $geodetic_datum_term, $geodetic_datum_len, [
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_geodetic_datum', $geodetic_datum_term, $geodetic_datum_len, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;geodetic_datum',
-      'as' => 'nd_geo_geodetic_datum',
+      'as' => 'nd_geodetic_datum',
     ]);
-    $properties[] = new ChadoTextStoragePropertyType($entity_type_id, self::$id, 'nd_geo_description', $description_term, [
+    $properties[] = new ChadoTextStoragePropertyType($entity_type_id, self::$id, 'nd_geo_desc', $description_term, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;description',
-      'as' => 'nd_geo_description',
+      'as' => 'nd_geo_desc',
     ]);
 
     return $properties;
@@ -336,11 +334,14 @@ if (1) {
   public static function generateSampleValue(FieldDefinitionInterface $field_definition) {
     $values = [];
     $values['record_id'] = 1;
-    $values['latitude'] = 0;
-    $values['longitude'] = 0;
-    $values['altitude'] = 0;
-    $values['geodetic_datum'] = '';
-    $values['description'] = '';
+    $values['entity_id'] = NULL;
+    $values['linker_type_id'] = 1;
+    $values['nd_exp_type_id'] = 1;
+    $values['nd_geo_lat'] = 0;
+    $values['nd_geo_lon'] = 0;
+    $values['nd_geo_alt'] = 0;
+    $values['nd_geodetic_datum'] = '';
+    $values['nd_geo_desc'] = '';
     return $values;
   }
 
