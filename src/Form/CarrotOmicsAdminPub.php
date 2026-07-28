@@ -45,7 +45,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     TripalBackendPublishManager $publish_manager,
     TripalCitationManager $citation_manager,
   ) {
-    parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
+    parent::__construct($config_factory, $drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
     $this->citation_manager = $citation_manager;
   }
 
@@ -556,6 +556,7 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     $query->fields('PP', ['pub_id', 'type_id', 'value']);
     $query->condition('PP.type_id', $terms, 'IN');
     $ppresults = $query->execute();
+    $props = [];
     foreach ($ppresults as $pp) {
       $props[$pp->pub_id][$pp->type_id] = $pp->value;
     }

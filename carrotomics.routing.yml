@@ -16,7 +16,7 @@ carrotomics.admin.validate_form:
   path: '/admin/carrotomics/validate'
   defaults:
     _form: 'Drupal\carrotomics\Form\CarrotOmicsAdminValidate'
-    _title: 'SQL Tools'
+    _title: 'Validation Tools'
   requirements:
     _permission: 'administer tripal'
 

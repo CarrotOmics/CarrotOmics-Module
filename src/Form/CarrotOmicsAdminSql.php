@@ -29,7 +29,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     TripalLogger $logger,
     TripalBackendPublishManager $publish_manager,
   ) {
-    parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
+    parent::__construct($config_factory, $drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
   }
 
   /**

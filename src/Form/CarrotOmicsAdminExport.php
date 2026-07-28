@@ -38,7 +38,7 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
     TripalBackendPublishManager $publish_manager,
     FileSystem $file_system,
   ) {
-    parent::__construct($drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
+    parent::__construct($config_factory, $drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
     $this->file_system = $file_system;
   }
 
