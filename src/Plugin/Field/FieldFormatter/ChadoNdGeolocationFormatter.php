@@ -4,7 +4,9 @@ namespace Drupal\carrotomics\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Link;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Url;
 use Drupal\tripal\TripalField\Attribute\TripalFieldFormatter;
 use Drupal\tripal_chado\TripalField\ChadoFormatterBase;
 
@@ -35,10 +37,10 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
    */
   public static function defaultSettings() {
     $settings = parent::defaultSettings();
-    // No label for types or description as they may be empty.
-    $settings['token_string'] = '[linker_type] [nd_exp_type] Latitude: [nd_geo_lat], Longitude: [nd_geo_lon], Altitude: [nd_geo_alt]m [nd_geo_desc]';
+    $settings['token_string'] = 'Latitude: [nd_geo_lat], Longitude: [nd_geo_lon], Altitude: [nd_geo_alt]m<br>[nd_geo_desc]';
     $settings['decimal_places'] = 6;
-    // Supported are 'decimal' and 'dms' for Deg°Min'Sec".
+    $settings['decimal_places_altitude'] = 0;
+    // Supported styles are 'decimal' and 'dms' for Deg°Min'Sec".
     $settings['output_style'] = 'decimal';
     return $settings;
   }
@@ -52,23 +54,24 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
     $list = [];
     $token_string = $this->getSetting('token_string');
     $decimal_places = $this->getSetting('decimal_places') ?? 6;
+    $decimal_places_altitude = $this->getSetting('decimal_places_altitude') ?? 0;
     $output_style = $this->getSetting('output_style') ?? 'decimal';
     $lookup_manager = \Drupal::service('tripal.tripal_entity.lookup');
 
     foreach ($items as $delta => $item) {
-      $latitude = $item->get('nd_geo_lat')->getString();
-      $longitude = $item->get('nd_geo_lon')->getString();
-      $altitude = $item->get('nd_geo_alt')->getString();
+      $raw_latitude = $item->get('nd_geo_lat')->getString();
+      $raw_longitude = $item->get('nd_geo_lon')->getString();
+      $raw_altitude = $item->get('nd_geo_alt')->getString();
 
       if ($output_style == 'dms') {
-        $latitude = $this->decimalToDMSString($latitude, $decimal_places, 'lat');
-        $longitude = $this->decimalToDMSString($longitude, $decimal_places, 'lon');
+        $latitude = $this->decimalToDMSString($raw_latitude, $decimal_places, 'lat');
+        $longitude = $this->decimalToDMSString($raw_longitude, $decimal_places, 'lon');
       }
       else {
-        $latitude = sprintf('%0.' . $decimal_places . 'f', $latitude);
-        $longitude = sprintf('%0.' . $decimal_places . 'f', $longitude);
+        $latitude = sprintf('%0.' . $decimal_places . 'f', $raw_latitude);
+        $longitude = sprintf('%0.' . $decimal_places . 'f', $raw_longitude);
       }
-      $altitude = sprintf('%0.' . $decimal_places . 'f', $altitude);
+      $altitude = sprintf('%0.' . $decimal_places_altitude . 'f', $raw_altitude);
       $values = [
         'entity_id' => $item->get('entity_id')->getString(),
         'nd_geo_lat' => $latitude,
@@ -90,6 +93,32 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
       // Create a clickable link to the corresponding entity when one exists.
       $renderable_item = $lookup_manager->getRenderableItem($displayed_string, $values['entity_id']);
 
+      if (strlen($raw_latitude) && strlen($raw_longitude)) {
+        // Bounding box coordinates for the mini-map.
+        $lat_margin = 10;
+        $lon_margin = 12;
+        $lat1 = $raw_latitude - $lat_margin;
+        $lon1 = $raw_longitude - $lon_margin;
+        $lat2 = $raw_latitude + $lat_margin;
+        $lon2 = $raw_longitude + $lon_margin;
+
+        $iframe = '<iframe width="300" height="250" src="https://www.openstreetmap.org/export/embed?bbox='
+        . $lon1 . '%2C' . $lat1 . '%2C' . $lon2 . '%2C' . $lat2 . '&amp;layer=mapnik&amp;marker='
+        . $raw_latitude . '%2C' . $raw_longitude . '" style="border: 1px solid black"></iframe>';
+
+        $zoom = 6;
+        $url = 'https://www.openstreetmap.org/?mlat=' . $raw_latitude . '&mlon=' . $raw_longitude . '#map=' . $zoom . '/' . $raw_latitude . '/' . $raw_longitude;
+        $url_object = Url::fromUri($url);
+        $url_object->setOptions(['attributes' => ['target' => '_blank']]);
+        $link = Link::fromTextAndUrl('View Larger Map', $url_object);
+
+        // Adds the mini-map iframe.
+        $renderable_item['#markup'] .= "<br>\n" . $iframe;
+
+        // Adds the link to view a larger map.
+        $renderable_item['#markup'] .= "<br>\n" . $link->toString();
+        $renderable_item['#allowed_tags'] = ['a', 'br', 'iframe'];
+      }
       $list[$delta] = $renderable_item;
     }
 
@@ -117,11 +146,20 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
     ];
     $form['decimal_places'] = [
       '#title' => $this->t('Decimal places'),
-      '#description' => $this->t('Sets the number of decimal places displayed'),
+      '#description' => $this->t('Sets the number of decimal places displayed for latitude and longitude'),
       '#type' => 'number',
       '#min' => 0,
-      '#max' => 32,
+      '#max' => 16,
       '#default_value' => $this->getSetting('decimal_places'),
+      '#required' => FALSE,
+    ];
+    $form['decimal_places_altitude'] = [
+      '#title' => $this->t('Decimal places for Altitude'),
+      '#description' => $this->t('Sets the number of decimal places displayed for altitude'),
+      '#type' => 'number',
+      '#min' => 0,
+      '#max' => 16,
+      '#default_value' => $this->getSetting('decimal_places_altitude'),
       '#required' => FALSE,
     ];
 
@@ -172,22 +210,21 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
 
     // Handle rounding overflows.
     if ($seconds >= 60) {
-      $seconds = 0;
+      $seconds -= 60;
       $minutes += 1;
     }
     if ($minutes >= 60) {
-      $minutes = 0;
+      $minutes -= 60;
       $degrees += 1;
     }
 
-    // Format components with padded zeros.
-    $pad_deg = (int)$degrees;
+    // Pad with zeros to make sure minutes and seconds are two digits.
     $pad_min = sprintf('%02d', $minutes);
     // E.g. %05.2f pads seconds to 5 total characters (00.00).
     $pad_sec = sprintf('%0' . ($decimal_places ? ($decimal_places + 3) : 2) . '.' . $decimal_places . 'f', $seconds);
 
     // Combine all the components.
-    $formatted = $pad_deg . '°' . $pad_min . "'" . $pad_sec . '"' . $direction;
+    $formatted = $degrees . '°' . $pad_min . "'" . $pad_sec . '"' . $direction;
 
     return $formatted;
   }
