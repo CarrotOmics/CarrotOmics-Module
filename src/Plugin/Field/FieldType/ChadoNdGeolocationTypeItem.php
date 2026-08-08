@@ -166,13 +166,14 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     $linker_fkey_term = self::getColumnTermId($linker_table, $linker_fkey_column, self::$record_id_term);
     $linker_type_id_term = self::getColumnTermId($linker_table, 'type_id', 'schema:additionalType');
 
-    // Cvterm table, to retrieve the name for the linker
+    // Cvterm table, to retrieve the cvterm name for the linker
     // and nd_experiment types.
     $cvterm_schema_def = self::getChadoTableDef('cvterm', $schema);
     $cvterm_name_term = self::getColumnTermId('cvterm', 'name', 'schema:name');
-    $type_id_len = $cvterm_schema_def['fields']['name']['size'];
+    $cvterm_name_len = $cvterm_schema_def['fields']['name']['size'];
 
-    // Final table, nd_geolocation, is invariant so it is hard-coded.
+    // The final table, nd_geolocation, is specific to this field,
+    // so it is hard-coded.
     $nd_geolocation_schema_def = self::getChadoTableDef('nd_geolocation', $schema);
     $latitude_term = self::getColumnTermId('nd_geolocation', 'latitude', 'SIO:000319');
     $longitude_term = self::getColumnTermId('nd_geolocation', 'longitude', 'SIO:000318');
@@ -232,62 +233,32 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
       'path' => $linker_table . '.type_id',
       'as' => 'linker_type_id',
     ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $type_id_len, [
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $cvterm_name_len, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.type_id>cvterm.cvterm_id;name',
       'as' => 'linker_type',
     ]);
 
-    // The remaining properties are from the final (third) hop to
-    // the nd_experiment table.
-    // Define the second stage linker table, i.e. nd_experiment.
-    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_experiment_linker_id', self::$record_id_term, [
-      'action' => 'store_pkey',
-      'drupal_store' => TRUE,
-      'path' => 'nd_experiment.nd_experiment_id',
-    ]);
-
-    // Define the link between the base table and the second stage linker table.
-    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_experiment_link', $linker_left_term, [
-      'action' => 'store_link',
-      'drupal_store' => FALSE,
-      'path' => $base_table . '.' . $base_pkey_col . '>' . $linker_table . '.' . $linker_left_col . ';'
-      . $linker_table . '.nd_experiment>nd_experiment.nd_experiment_id',
-    ]);
-
-    // The nd_experiment table also has a type.
+    // The nd_experiment table also has a type_id.
     $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type_id', self::$record_id_term, [
       'action' => 'store',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;type_id',
       'as' => 'nd_exp_type_id',
     ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type', $linker_type_id_term, $type_id_len, [
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type', $linker_type_id_term, $cvterm_name_len, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;nd_experiment.type_id>cvterm.cvterm_id;name',
       'as' => 'nd_exp_type',
     ]);
 
-    // Define the link between the base table and the nd_geolocation table.
-    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_geolocation', $linker_left_term, [
-      'action' => 'store_link',
-      'drupal_store' => FALSE,
-      'path' => $base_table . '.' . $base_pkey_col . '>' . $linker_table . '.' . $linker_left_col
-      . ';' . $linker_table . '.' . $linker_fkey_column . '>nd_geolocation.nd_geolocation_id',
-    ]);
-// Do I need nd_geolocation_id?
-if (1) {
-    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_geolocation_id', $linker_left_term, [
-      'action' => 'store_pkey',
-      'drupal_store' => FALSE,
-      'path' => $base_table . '.' . $base_pkey_col . '>' . $linker_table . '.' . $linker_left_col
-      . ';' . $linker_table . '.' . $linker_fkey_column . '>nd_geolocation.nd_geolocation_id',
-    ]);
-}
-
-    // The various values from the nd_geolocation table.
+    // The remaining properties are from the final (third) hop to
+    // the nd_geolocation table. Because this table is linked to from the
+    // object table (nd_experiment), and this constitutes an additional
+    // hop, we cannot use a 'store' action here because the needed join
+    // will not be available.
     $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_lat', $latitude_term, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
@@ -296,8 +267,7 @@ if (1) {
       'as' => 'nd_geo_lat',
     ]);
     $properties[] = new ChadoRealStoragePropertyType($entity_type_id, self::$id, 'nd_geo_lon', $longitude_term, [
-#      'action' => 'read_value',
-      'action' => 'store',
+      'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>' . $object_table . '.' . $object_pkey_col
       . ';' . $object_table . '.nd_geolocation_id>nd_geolocation.nd_geolocation_id;longitude',
@@ -337,9 +307,9 @@ if (1) {
     $values['entity_id'] = NULL;
     $values['linker_type_id'] = 1;
     $values['nd_exp_type_id'] = 1;
-    $values['nd_geo_lat'] = 0;
-    $values['nd_geo_lon'] = 0;
-    $values['nd_geo_alt'] = 0;
+    $values['nd_geo_lat'] = 0.0;
+    $values['nd_geo_lon'] = 0.0;
+    $values['nd_geo_alt'] = 0.0;
     $values['nd_geodetic_datum'] = '';
     $values['nd_geo_desc'] = '';
     return $values;
@@ -392,6 +362,35 @@ if (1) {
       $compatible = FALSE;
     }
     return $compatible;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see \Drupal\tripal\TripalField\Interfaces\TripalFieldItemInterface::discover()
+   */
+  public static function discover(
+    TripalEntityType $bundle,
+    string $field_id,
+    array $field_types,
+    array $field_instances,
+    array $options = [],
+  ): array {
+
+    // Specific settings for this field.
+    $options += [
+      'id' => self::$id,
+      'table' => self::$object_table,
+      'label' => 'Geographic Location',
+      'termIdSpace' => 'SIO',
+      'termAccession' => '000013',
+      'description' => 'A geo-referencable location',
+    ];
+
+    // Call the parent discover() with this field's specific options.
+    $field_list = parent::discover($bundle, $field_id, $field_types, $field_instances, $options);
+
+    return $field_list;
   }
 
 }
