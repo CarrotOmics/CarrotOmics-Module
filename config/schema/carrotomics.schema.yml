@@ -1,0 +1,20 @@
+## @file
+## Drupal schema information for various functionality provided by Tripal.
+## Specifically, focused on Tripal Entities, Tripal Entity Types, and Fields.
+
+field.formatter.settings.chado_nd_geolocation_formatter:
+  type: mapping
+  mapping:
+    decimal_places:
+      type: 'integer'
+      label: 'Decimal Places for Latitude and Longitude'
+      nullable: true
+    decimal_places_altitude:
+      type: 'integer'
+      label: 'Decimal Places for Altitude'
+      nullable: true
+    output_style:
+      type: 'string'
+      label: 'Output Style'
+      nullable: true
+

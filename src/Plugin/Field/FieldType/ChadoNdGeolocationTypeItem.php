@@ -157,14 +157,21 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     $object_table = self::$object_table;
     $object_schema_def = self::getChadoTableDef($object_table, $schema);
 
-    // Linker table.
+    // Standard linker table.
     [$linker_table, $linker_fkey_column] = self::get_linker_table_and_column($storage_settings, $base_table, $object_pkey_col);
     $linker_schema_def = self::getChadoTableDef($linker_table, $schema);
     $linker_pkey_col = $linker_schema_def['primary key'];
     $linker_left_col = self::getChadoForeignKeyColumn($linker_table, $base_table, $schema);
     $linker_left_term = self::getColumnTermId($linker_table, $linker_left_col, self::$record_id_term);
     $linker_fkey_term = self::getColumnTermId($linker_table, $linker_fkey_column, self::$record_id_term);
-    $linker_type_id_term = self::getColumnTermId($linker_table, 'type_id', 'schema:additionalType');
+    // Only some linker tables have a type_id column.
+    $linker_type_id_term = NULL;
+    if (array_key_exists('type_id', $linker_schema_def['fields'])) {
+      $linker_type_id_term = self::getColumnTermId($linker_table, 'type_id', 'schema:additionalType');
+    }
+
+    // Second level linker table.
+    $nd_exp_type_id_term = self::getColumnTermId('nd_experiment', 'type_id', 'schema:additionalType');
 
     // Cvterm table, to retrieve the cvterm name for the linker
     // and nd_experiment types.
@@ -226,28 +233,30 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
       'empty_value' => 0,
     ]);
 
-    // The linker table always has a type_id.
-    $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'linker_type_id', $linker_type_id_term, [
-      'action' => 'store',
-      'drupal_store' => FALSE,
-      'path' => $linker_table . '.type_id',
-      'as' => 'linker_type_id',
-    ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $cvterm_name_len, [
-      'action' => 'read_value',
-      'drupal_store' => FALSE,
-      'path' => $linker_table . '.type_id>cvterm.cvterm_id;name',
-      'as' => 'linker_type',
-    ]);
+    // Only some linker tables have a type_id column.
+    if ($linker_type_id_term) {
+      $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'linker_type_id', $linker_type_id_term, [
+        'action' => 'store',
+        'drupal_store' => FALSE,
+        'path' => $linker_table . '.type_id',
+        'as' => 'linker_type_id',
+      ]);
+      $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $cvterm_name_len, [
+        'action' => 'read_value',
+        'drupal_store' => FALSE,
+        'path' => $linker_table . '.type_id>cvterm.cvterm_id;name',
+        'as' => 'linker_type',
+      ]);
+    }
 
-    // The nd_experiment table also has a type_id.
+    // The nd_experiment table has a type_id.
     $properties[] = new ChadoIntStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type_id', self::$record_id_term, [
       'action' => 'store',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;type_id',
       'as' => 'nd_exp_type_id',
     ]);
-    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type', $linker_type_id_term, $cvterm_name_len, [
+    $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'nd_exp_type', $nd_exp_type_id_term, $cvterm_name_len, [
       'action' => 'read_value',
       'drupal_store' => FALSE,
       'path' => $linker_table . '.' . $linker_fkey_column . '>nd_experiment.nd_experiment_id;nd_experiment.type_id>cvterm.cvterm_id;name',
@@ -384,7 +393,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
       'label' => 'Geographic Location',
       'termIdSpace' => 'SIO',
       'termAccession' => '000013',
-      'description' => 'A geo-referencable location',
+      'description' => 'A geo-referenceable location',
     ];
 
     // Call the parent discover() with this field's specific options.
