@@ -7,3 +7,7 @@ carrotomics-admin:
     - 'core/drupal'
     - 'core/jquery'
     - 'core/drupalSettings'
+olivero_carrotomics:
+  css:
+    theme:
+      css/olivero_carrotomics.css: {}

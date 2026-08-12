@@ -64,7 +64,6 @@ class CarrotOmicsHooks {
    * The hook uninstall does not support attributes and must remain procedural.
    */
   public function carrotomicsUninstall() {
-print "CPU2 hook uninstall called\n";//;;;
     // Delete the custom tables created by this module.
     $this->rebuildService->dropCustomChadoTables();
   }
