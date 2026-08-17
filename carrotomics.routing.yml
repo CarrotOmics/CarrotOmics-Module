@@ -46,3 +46,12 @@ carrotomics.admin.sql_form:
     _title: 'SQL Tools'
   requirements:
     _permission: 'administer tripal'
+
+# Overview page.
+carrotomics.status_report:
+  path: '/status_report'
+  defaults:
+    _title: 'CarrotOmics Status Report'
+    _controller: '\Drupal\carrotomics\Controller\StatusReportController::content'
+  requirements:
+    _access: 'TRUE'
