@@ -101,12 +101,12 @@ class StatusReportController extends ControllerBase {
     /**
      * Germplasm and BioSamples.
      */
-    $results = $this->chado_connection->query("SELECT SC.name, SCP.value, COUNT(*) AS count FROM {1:stockcollection} SC LEFT JOIN {1:stockcollectionprop} SCP ON SC.stockcollection_id=SCP.stockcollection_id LEFT JOIN {1:stockcollection_stock} SCS ON SC.stockcollection_id=SCS.stockcollection_id GROUP BY SC.name, SCP.value ORDER BY SCP.value");
+    $results = $this->chado_connection->query("SELECT SC.name, SC.uniquename, COUNT(*) AS count FROM {1:stockcollection} SC LEFT JOIN {1:stockcollectionprop} SCP ON SC.stockcollection_id=SCP.stockcollection_id LEFT JOIN {1:stockcollection_stock} SCS ON SC.stockcollection_id=SCS.stockcollection_id GROUP BY SC.name, SC.uniquename ORDER BY SC.name");
     $rows = [];
     $acc_total = 0;
     foreach ($results as $result) {
-      $name = $result->value;
-      $abbr = $result->name;
+      $name = $result->name;
+      $abbr = $result->uniquename;
       $acc_total = $acc_total + $result->count;
       $count = $this->formatInt($result->count);
       $rows[] = [$count, $name, $abbr];
