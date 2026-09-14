@@ -4,7 +4,6 @@
   color: hsl(33.8, 69.6%, 42.5%) !important
 }
 
-
 /* was 1.125 */
 :root {
   --sp: 1.0rem !important
@@ -36,7 +35,37 @@ p:last-child {
   background-color: #e08030 !important; /* Button color */
 }
 
+/* Puts two blocks in hero side-by-side */
+.region--hero {
+  display: flex;
+  gap: 20px;
+}
+.region--hero .block {
+  flex: 1;
+}
+
+.news-and-events-table {
+  margin-top: 0 !important;
+  margin-left: 20px !important;
+}
+
+.news-and-events-table td {
+  display: list-item;
+  padding-block: 4px !important;
+  line-height: 1.2;
+  border-block-end: none !important;
+}
+
+.view-news-and-events .more-link {
+  margin-top: -75px;
+  padding-top: 0;
+}
+
 #page > footer > div {
   padding-top: 20px;
   padding-bottom: 0;
+}
+
+.site-footer {
+  background: linear-gradient(180deg, hsl(96, 62%, 22%) 0%, hsl(100, 70%, 8%) 100%) !important;
 }
