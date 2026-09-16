@@ -47,11 +47,20 @@ carrotomics.admin.sql_form:
   requirements:
     _permission: 'administer tripal'
 
-# Overview page.
+# Overview status page.
 carrotomics.status_report:
   path: '/status_report'
   defaults:
     _title: 'CarrotOmics Status Report'
     _controller: '\Drupal\carrotomics\Controller\StatusReportController::content'
+  requirements:
+    _access: 'TRUE'
+
+# Genome Assembly List page.
+carrotomics.genome_assemblies:
+  path: '/genome_assemblies'
+  defaults:
+    _title: 'Genome Assemblies'
+    _controller: '\Drupal\carrotomics\Controller\GenomeAssembliesController::content'
   requirements:
     _access: 'TRUE'
