@@ -69,3 +69,19 @@ p:last-child {
 .site-footer {
   background: linear-gradient(180deg, hsl(96, 62%, 22%) 0%, hsl(100, 70%, 8%) 100%) !important;
 }
+
+.carrotomics-table {
+  border-collapse: collapse;
+}
+
+.carrotomics-table th {
+  border-bottom: 2px solid var(--color--primary-50);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.carrotomics-table td {
+  border-bottom: 2px solid var(--color--gray-65);
+  padding-left: 8px;
+  padding-right: 8px;
+}

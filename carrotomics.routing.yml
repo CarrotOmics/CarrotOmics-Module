@@ -64,3 +64,12 @@ carrotomics.genome_assemblies:
     _controller: '\Drupal\carrotomics\Controller\GenomeAssembliesController::content'
   requirements:
     _access: 'TRUE'
+
+# Publications with Phylogenetic Trees page.
+carrotomics.phylogenetic_trees:
+  path: '/phylogenetic_trees'
+  defaults:
+    _title: 'Publications with Phylogenetic Trees'
+    _controller: '\Drupal\carrotomics\Controller\PhylogeneticTreesController::content'
+  requirements:
+    _access: 'TRUE'
