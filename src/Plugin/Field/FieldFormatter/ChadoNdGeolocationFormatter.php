@@ -91,7 +91,8 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
       $displayed_string = trim($displayed_string);
 
       // Create a clickable link to the corresponding entity when one exists.
-      $renderable_item = $lookup_manager->getRenderableItem($displayed_string, $values['entity_id']);
+      // @todo This blocks map display, so disable.
+      // $renderable_item = $lookup_manager->getRenderableItem($displayed_string, $values['entity_id']);
 
       if (strlen($raw_latitude) && strlen($raw_longitude)) {
         // Bounding box coordinates for the mini-map.

@@ -12,12 +12,12 @@ use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides the user interface for CarrotOmics publication tools.
+ * Provides the user interface for CarrotOmics database maintenance tools.
  */
 class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
   /**
-   * CarrotOmicsAdminPub class constructor.
+   * CarrotOmicsAdminSql class constructor.
    *
    * Prepares injected services.
    */

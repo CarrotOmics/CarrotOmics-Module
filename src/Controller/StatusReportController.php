@@ -432,7 +432,7 @@ class StatusReportController extends ControllerBase {
   }
 
   /**
-   * Formats an integer with thousands separator.
+   * Formats an integer with thousand separator.
    *
    * @param int
    *   The value to format, e.g. '1234567'.
