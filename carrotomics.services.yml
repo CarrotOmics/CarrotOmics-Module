@@ -9,4 +9,7 @@ services:
     class: 'Drupal\carrotomics\Hook\CarrotOmicsHooks'
     arguments:
       - '@carrotomics.rebuild_service'
-
+  carrotomics.linkout_service:
+    class: 'Drupal\carrotomics\Services\CarrotOmicsLinkoutService'
+    arguments:
+      - '@tripal.logger'

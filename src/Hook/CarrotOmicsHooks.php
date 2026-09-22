@@ -68,4 +68,14 @@ class CarrotOmicsHooks {
     $this->rebuildService->dropCustomChadoTables();
   }
 
+  /**
+   * Implements hook_blast_linkout_info().
+   *
+   * This is used for the tripal_blast module.
+   */
+  #[Hook('blast_linkout_info')]
+  public function blastLinkoutInfo() {
+    return \Drupal::service('carrotomics.linkout_service')->getLinkoutTypes();
+  }
+
 }
