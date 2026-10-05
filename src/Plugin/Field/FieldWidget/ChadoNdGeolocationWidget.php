@@ -27,7 +27,7 @@ class ChadoNdGeolocationWidget extends ChadoWidgetBase {
    */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
 
-    // Cannot currently implement because of extra hop.
+    // @todo Cannot currently implement because of extra hop.
     return [];
 
     // Get the field settings.

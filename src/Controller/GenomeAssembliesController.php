@@ -3,8 +3,6 @@
 namespace Drupal\carrotomics\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Link;
-use Drupal\Core\Url;
 use Drupal\tripal\Services\TripalEntityLookup;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -12,7 +10,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Generates the list of genome assemblies page.
  */
-
 class GenomeAssembliesController extends ControllerBase {
 
   /**
@@ -118,14 +115,15 @@ class GenomeAssembliesController extends ControllerBase {
      * with cv term 'EDAM:Core data' and value 'integrated_assembly'.
      */
     $ia_items = [];
-    foreach ($analyses as $analysis_id => $info) {
+    foreach ($analyses as $info) {
       if (($info['ga'][0] ?? '') == 'genome_assembly') {
         if (($info['cd'][0] ?? '') == 'integrated_assembly') {
           $name = $info['ga'][1];
           $entity_id = $info['ga'][2];
           if ($entity_id) {
             // n.b. this is too slow for this many records:
-            // $name = Link::fromTextAndUrl($name, Url::fromUserInput('/bio_data/' . $entity_id))->toString();
+            // $name = Link::fromTextAndUrl($name,
+            // Url::fromUserInput('/bio_data/' . $entity_id))->toString();.
             $name = ['#markup' => '<a href="/bio_data/' . $entity_id . '">' . $name . '</a>'];
           }
           $ia_items[] = $name;
@@ -148,7 +146,7 @@ class GenomeAssembliesController extends ControllerBase {
      * Other assemblies referenced in CarrotOmics.
      */
     $oa_items = [];
-    foreach ($analyses as $analysis_id => $info) {
+    foreach ($analyses as $info) {
       if (($info['ga'][0] ?? '') == 'genome_assembly') {
         if (!($info['cd'][0] ?? '')) {
           $name = $info['ga'][1];
@@ -176,7 +174,7 @@ class GenomeAssembliesController extends ControllerBase {
      * Mitochondrial assemblies integrated into CarrotOmics.
      */
     $ma_items = [];
-    foreach ($analyses as $analysis_id => $info) {
+    foreach ($analyses as $info) {
       if (($info['ga'][0] ?? '') == 'genome_assembly') {
         if (($info['cd'][0] ?? '') == 'mitochondrial_assembly') {
           $name = $info['ga'][1];
@@ -204,7 +202,7 @@ class GenomeAssembliesController extends ControllerBase {
      * Plastid assemblies integrated into CarrotOmics.
      */
     $pa_items = [];
-    foreach ($analyses as $analysis_id => $info) {
+    foreach ($analyses as $info) {
       if (($info['ga'][0] ?? '') == 'genome_assembly') {
         if (($info['cd'][0] ?? '') == 'plastid_assembly') {
           $name = $info['ga'][1];

@@ -110,7 +110,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       ];
     }
 
-    // ;;;
+    // @todo implement.
     if (FALSE) {
       // Add a 'Find Unpublished Content' button.
       $form['val_find_unpub_btn'] = [
@@ -122,7 +122,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
         . "</em></div><br />",
         '#suffix' => "<hr>",
       ];
-    } //;;;
+    }
 
     // Add a 'Find double-published records' button and bundle select.
     $form['val_bundle_id'] = [
@@ -141,6 +141,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       '#suffix' => '<hr>',
     ];
 
+    // @todo implement.
     if (FALSE) {
       // Add a 'Validate CarrotOmics accessions' button.
       $form['val_car_acc_btn'] = [
@@ -155,7 +156,8 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
         '#suffix' => "<hr>",
       ];
 
-    } // ;;;
+    }
+
     // Add a 'Validate public:// fileloc entries' button.
     $form['val_fileloc_btn'] = [
       '#type'   => 'submit',
@@ -169,7 +171,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       '#suffix' => '<hr>',
     ];
 
-    // ;;;
+    // @todo implement.
     if (FALSE) {
       // Add a 'Validate eimage urls' button.
       $form['val_eimage_btn'] = [
@@ -181,8 +183,8 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
         . "</em></div><br />",
         '#suffix' => "<hr>",
       ];
+    }
 
-    } // ;;;
     return $form;
   }
 

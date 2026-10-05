@@ -12,7 +12,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Generates the CarrotOmics Status Report page.
  */
-
 class StatusReportController extends ControllerBase {
 
   /**
@@ -324,8 +323,8 @@ class StatusReportController extends ControllerBase {
     $n_genetic_markers = $this->formatInt($this->chado_connection->query("SELECT COUNT(*) FROM {1:feature} WHERE type_id=(SELECT cvterm_id FROM {1:cvterm} WHERE name='genetic_marker')")->fetchField());
     $n_qtl = $this->formatInt($this->chado_connection->query("SELECT COUNT(*) FROM {1:feature} WHERE type_id=(SELECT cvterm_id FROM {1:cvterm} WHERE name='QTL')")->fetchField());
     $n_pheno = $this->formatInt($this->chado_connection->query("SELECT COUNT(*) FROM {1:feature} WHERE type_id=(SELECT cvterm_id FROM {1:cvterm} WHERE name='heritable_phenotypic_marker')")->fetchField());
-    // Waiting for module migration: $n_corr = $this->formatInt($this->chado_connection->query("SELECT COUNT(*) FROM {0:tripal_map_correspondences}")->fetchField());
-    $n_corr = 0;
+    // @todo Waiting for module migration: $n_corr = $this->formatInt($this->chado_connection->query("SELECT COUNT(*)
+    // FROM {0:tripal_map_correspondences}")->fetchField());.
     $elements['markers_maps'] = [
       '#type' => 'details',
       '#open' => TRUE,
@@ -335,7 +334,8 @@ class StatusReportController extends ControllerBase {
           @n_genetic_markers genetic markers, @n_qtl quantitative trait loci (QTL), and @n_pheno heritable mendelian trait loci (MTL) have been loaded and can be viewed with the Tripal Map Viewer.
           Maps are listed in the @genetic_map_link.<br>
           Search for genetic markers on the @genetic_marker_link. Search for QTL on the @qtl_link. Search for MTL on the @mtl_link.',
-          // Waiting for module migration: @n_corr marker to genome position correspondences have been loaded.
+          // @todo Waiting for module migration: @n_corr marker to genome position
+          // correspondences have been loaded.
           [
             '@n_maps' => $n_maps,
             '@n_genetic_markers' => $n_genetic_markers,
@@ -357,7 +357,7 @@ class StatusReportController extends ControllerBase {
     $elements['genomes'] = [
       '#type' => 'details',
       '#open' => TRUE,
-      '#title' =>  $this->t('Genomes'),
+      '#title' => $this->t('Genomes'),
       'body' => [
         '#markup' => $this->t('Waiting on reimplementation of JBrowse and BLAST.'),
       ],
@@ -424,7 +424,8 @@ class StatusReportController extends ControllerBase {
     /**
      * Search Functions.
      */
-    // All search functions in the Search menu are functional, including Tripal MegaSearch.
+    // @todo All search functions in the Search menu are functional,
+    // including Tripal MegaSearch.
     /**
      * Data Downloads.
      */
@@ -434,7 +435,7 @@ class StatusReportController extends ControllerBase {
   /**
    * Formats an integer with thousand separator.
    *
-   * @param int
+   * @param int $value
    *   The value to format, e.g. '1234567'.
    *
    * @return string
@@ -445,8 +446,3 @@ class StatusReportController extends ControllerBase {
   }
 
 }
-#      'heading' => [
-#        '#type' => 'html_tag',
-#        '#tag' => 'h3',
-#        '#value' => $this->t('Phenotypic Data'),
-#      ],

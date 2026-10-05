@@ -38,7 +38,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
    */
   public static $id = "chado_nd_geolocation";
 
- /**
+  /**
    * The chado table which is the object of the relationship.
    *
    * Because this is an unusual triple-hop field, this table is just the
@@ -63,7 +63,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
    */
   public static function mainPropertyName() {
     // The property that indicates if this field is empty.
-    return 'nd_geo_lat'; //;;;self::$object_id;
+    return 'nd_geo_lat';
   }
 
   /**
@@ -71,7 +71,8 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
    */
   public static function mainDisplayPropertyName() {
     // The property to use in the entity title/url.
-    return 'nd_geo_lat';  // @todo change to description?
+    // @todo change to description?
+    return 'nd_geo_lat';
   }
 
   /**
@@ -98,7 +99,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
    */
   public static function defaultFieldSettings() {
     $field_settings = parent::defaultFieldSettings();
-    // CV Term is 'geographic position';
+    // CV Term is 'geographic position'.
     $field_settings['termIdSpace'] = 'SIO';
     $field_settings['termAccession'] = '000013';
     return $field_settings;
@@ -241,7 +242,7 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
         'path' => $linker_table . '.type_id',
         'as' => 'linker_type_id',
       ]);
-      $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $linker_type_id_term, $cvterm_name_len, [
+      $properties[] = new ChadoVarCharStoragePropertyType($entity_type_id, self::$id, 'linker_type', $cvterm_name_term, $cvterm_name_len, [
         'action' => 'read_value',
         'drupal_store' => FALSE,
         'path' => $linker_table . '.type_id>cvterm.cvterm_id;name',
@@ -366,7 +367,6 @@ class ChadoNdGeolocationTypeItem extends ChadoFieldItemBase {
     // Get the base table for the content type.
     $base_table = $entity_type->getThirdPartySetting('tripal', 'chado_base_table');
     $linker_tables = $this->getLinkerTables(self::$object_table, $base_table);
-    $table_columns = $this->getTableColumns($base_table, self::$valid_base_column_types);
     if (count($linker_tables) < 1) {
       $compatible = FALSE;
     }

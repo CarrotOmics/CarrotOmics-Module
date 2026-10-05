@@ -3,8 +3,6 @@
 namespace Drupal\carrotomics\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Link;
-use Drupal\Core\Url;
 use Drupal\tripal\Services\TripalEntityLookup;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -12,7 +10,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Generates the Publications with Phylogenetic Trees page.
  */
-
 class PhylogeneticTreesController extends ControllerBase {
 
   /**
@@ -102,7 +99,7 @@ class PhylogeneticTreesController extends ControllerBase {
           '#items' => $level1[$pub_id]['trees'],
         ];
         $rows[] = [
-          $pyear,
+          'pyear' => $pyear,
           'pub' => ['data' => $level1[$pub_id]['pub']],
           'trees' => ['data' => $tree_ol],
         ];

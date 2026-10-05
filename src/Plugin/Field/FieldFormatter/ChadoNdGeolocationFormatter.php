@@ -56,7 +56,6 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
     $decimal_places = $this->getSetting('decimal_places') ?? 6;
     $decimal_places_altitude = $this->getSetting('decimal_places_altitude') ?? 0;
     $output_style = $this->getSetting('output_style') ?? 'decimal';
-    $lookup_manager = \Drupal::service('tripal.tripal_entity.lookup');
 
     foreach ($items as $delta => $item) {
       $raw_latitude = $item->get('nd_geo_lat')->getString();
@@ -64,8 +63,8 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
       $raw_altitude = $item->get('nd_geo_alt')->getString();
 
       if ($output_style == 'dms') {
-        $latitude = $this->decimalToDMSString($raw_latitude, $decimal_places, 'lat');
-        $longitude = $this->decimalToDMSString($raw_longitude, $decimal_places, 'lon');
+        $latitude = $this->decimalToDmsString($raw_latitude, $decimal_places, 'lat');
+        $longitude = $this->decimalToDmsString($raw_longitude, $decimal_places, 'lon');
       }
       else {
         $latitude = sprintf('%0.' . $decimal_places . 'f', $raw_latitude);
@@ -92,7 +91,8 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
 
       // Create a clickable link to the corresponding entity when one exists.
       // @todo This blocks map display, so disable.
-      // $renderable_item = $lookup_manager->getRenderableItem($displayed_string, $values['entity_id']);
+      // $renderable_item = $lookup_manager->getRenderableItem(
+      // $displayed_string, $values['entity_id']);.
       $renderable_item = [];
       $renderable_item['#markup'] = $displayed_string;
 
@@ -194,7 +194,7 @@ class ChadoNdGeolocationFormatter extends ChadoFormatterBase {
    * @return string
    *   The coordinate string in degrees, minutes, seconds.
    */
-  protected function decimalToDMSString(float $value, int $decimal_places, string $type): string {
+  protected function decimalToDmsString(float $value, int $decimal_places, string $type): string {
 
     // Determine hemisphere direction.
     if ($type === 'lat') {
