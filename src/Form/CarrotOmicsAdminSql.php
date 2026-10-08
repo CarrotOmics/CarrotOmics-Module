@@ -126,21 +126,21 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '#suffix' => "<hr>",
     ];
 
+    // Add a 'Populate feature residues Length and Checksum' button.
+    $form['residues_btn'] = [
+      '#type'   => 'submit',
+      '#name'   => 'residues_btn',
+      '#value'  => 'Populate feature residues Length and Checksum',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "In the chado.feature table, any record with content in the"
+      . " residues column will have the seqlen and md5checksum columns"
+      . " populated with appropriate values if they are missing."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
+
     // ;;;
     if (FALSE) {
-      // Add a 'Populate feature residues Length and Checksum' button.
-      $form['residues_btn'] = [
-        '#type'   => 'submit',
-        '#name'   => 'residues_btn',
-        '#value'  => 'Populate feature residues Length and Checksum',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "In the chado.feature table, any record with content in the"
-        . " residues column will have the seqlen and md5checksum columns"
-        . " populated with appropriate values if they are missing."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
-
       // Add a 'Generate QTL Abbreviations' button.
       $form['qtl_abbrev_btn'] = [
         '#type'   => 'submit',
@@ -268,7 +268,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->populateOrganismAbbreviations();
     }
     elseif ($triggering_element == 'residues_btn') {
-      [$nerrors, $status] = carrotomics_admin_residues_length_checksum();
+      [$nerrors, $status] = $this->residuesLengthChecksum();
     }
     elseif ($triggering_element == 'qtl_abbrev_btn') {
       [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
@@ -402,7 +402,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     $organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
 
     // Get the list of organisms with a NULL or blank abbreviation.
-    $sql1 = "SELECT organism_id FROM {organism} WHERE (abbreviation <> '') IS NOT TRUE";
+    $sql1 = "SELECT organism_id FROM {1:organism} WHERE (abbreviation <> '') IS NOT TRUE";
     $args1 = [];
     try {
       $results1 = $this->chado_connection->query($sql1, $args1);
@@ -415,7 +415,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       $organism_id = $obj->organism_id;
       $sciname = $organism_buddy->getOrganismScientificName(['organism.organism_id' => $organism_id], []);
       if ($sciname) {
-        $sql2 = "UPDATE {organism} SET abbreviation=:abbreviation WHERE organism_id=:organism_id";
+        $sql2 = "UPDATE {1:organism} SET abbreviation=:abbreviation WHERE organism_id=:organism_id";
         $args2 = [':abbreviation' => $sciname, ':organism_id' => $organism_id];
         try {
           $results2 = $this->chado_connection->query($sql2, $args2);
@@ -435,6 +435,71 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     else {
       return [$nerrors, "There were no missing organism abbreviations, $nerrors errors"];
     }
+  }
+
+  /**
+   * Adds feature seqlen and md5checkum when missing.
+   *
+   * When a feature has a value in the residues column, the
+   * associated seqlen and md5checksum values should also be present.
+   * When this is not the case, this function fills in those values.
+   */
+  protected function residuesLengthChecksum() {
+    $errors = '';
+    $nerrors = 0;
+    $nupdated = 0;
+
+    // Retrieve a list of chado.feature records missing either length
+    // or checksum. There can be either empty strings or NULL values
+    // in both residues and md5checksum.
+    $sql = "SELECT feature_id, residues FROM {1:feature}"
+         // i.e. not NULL and not empty string.
+         . " WHERE (residues = '') IS FALSE"
+         // i.e. either NULL or zero.
+         . " AND ((seqlen = 0) IS NOT FALSE"
+         // i.e. either NULL or empty string.
+         . " OR (md5checksum = '') IS NOT FALSE)";
+    $args = [];
+    try {
+      $results = $this->chado_connection->query($sql, $args);
+    } catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+
+    // Validate the residue column before proceeding.
+    // Errors will have to be dealt with manually.
+    while ($obj = $results->fetchObject()) {
+      $feature_id = $obj->feature_id;
+      $residues = $obj->residues;
+      if (preg_match('/([^ABCDEFGHIKLMNPQRSTVWXYZabcdefghiklmnpqrstvwxyz\*])/', $residues, $matches)) {
+        $errors .= '<br>Invalid residue "'.$matches[1].'" in feature '.$feature_id;
+        $nerrors++;
+      }
+      else {
+        $nupdated++;
+      }
+    }
+
+    // If no errors, proceed with the update.
+    if ( (!$nerrors) and ($nupdated) ) {
+      $sql = "UPDATE {1:feature}"
+           . " SET seqlen=CHAR_LENGTH(residues), md5checksum=MD5(residues)"
+           . " WHERE (residues = '') IS FALSE"
+           . " AND ((seqlen = 0) IS NOT FALSE"
+           . " OR (md5checksum = '') IS NOT FALSE)";
+      $args = [];
+      try {
+        $results = $this->chado_connection->query($sql, $args);
+      } catch (Exception $e) {
+        return [1, $e->getMessage()];
+      }
+    }
+    else {
+      $nupdated = 0;
+    }
+    $status = t('Updated @nupdated features, @nerrors errors',
+                ['@nupdated' => $nupdated, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
   }
 
 }
