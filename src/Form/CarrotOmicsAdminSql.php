@@ -10,7 +10,7 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Database\ChadoConnection;
-#use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
+// Use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;.
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -139,20 +139,20 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '#suffix' => "<hr>",
     ];
 
+    // Add a 'Generate QTL Abbreviations' button.
+    $form['qtl_abbrev_btn'] = [
+      '#type'   => 'submit',
+      '#name'   => 'qtl_abbrev_btn',
+      '#value'  => 'Generate QTL Abbreviations',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Generate featureprop entries with MAIN::published_symbol cvterm"
+      . " for all QTL lacking them, if they are of the format </em>MK012345 anytext<em>."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
+
     // ;;;
     if (FALSE) {
-      // Add a 'Generate QTL Abbreviations' button.
-      $form['qtl_abbrev_btn'] = [
-        '#type'   => 'submit',
-        '#name'   => 'qtl_abbrev_btn',
-        '#value'  => 'Generate QTL Abbreviations',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Generate featureprop entries with MAIN::published_symbol cvterm"
-        . " for all QTL lacking them, if they are of the format </em>MK012345 anytext<em>"
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
-
       // Add a 'Make marker_locus match genetic_marker' button.
       $form['genetic_marker_marker_locus_fix_btn'] = [
         '#type'   => 'submit',
@@ -271,7 +271,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->residuesLengthChecksum();
     }
     elseif ($triggering_element == 'qtl_abbrev_btn') {
-      [$nerrors, $status] = carrotomics_admin_qtl_abbrev();
+      [$nerrors, $status] = $this->qtlAbbrev();
     }
     elseif ($triggering_element == 'genetic_marker_marker_locus_fix_btn') {
       [$nerrors, $status] = carrotomics_admin_genetic_marker_marker_locus_fix();
@@ -361,27 +361,28 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
    * or null properties, here we will delete them all.
    */
   protected function cleanNullProps() {
-    $tables = [ 'stockprop', 'eimageprop' ];
+    $tables = ['stockprop', 'eimageprop'];
 
     // First get number of matching records that we will delete.
     $sql1 = "SELECT COUNT(*) FROM {organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {dbxref} WHERE accession='NULL')";
     $args1 = [];
     $count = $this->chado_connection->query($sql1, $args1)->fetchField();
-    // If count is not zero, delete the offending records
+    // If count is not zero, delete the offending records.
     if ($count) {
       $sql2 = "DELETE FROM {organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {dbxref} WHERE accession='NULL')";
       $args2 = [];
-      $result2 = $this->chado_connection->query($sql2, $args2);
+      $this->chado_connection->query($sql2, $args2);
     }
-    // For each properties table, count and then delete records with a NULL value
-    foreach ( $tables as $table ) {
+    // For each properties table, count and then delete records
+    // having a NULL value.
+    foreach ($tables as $table) {
       $sql3 = 'SELECT COUNT(*) FROM {' . $table . '} WHERE value IS NULL';
       $args3 = [];
       $nullcount = $this->chado_connection->query($sql3, $args3)->fetchField();
       if ($nullcount) {
         $sql4 = 'DELETE FROM {' . $table . '} WHERE value IS NULL';
         $args4 = [];
-        $result4 = $this->chado_connection->query($sql4, $args4);
+        $this->chado_connection->query($sql4, $args4);
         $count += $nullcount;
       }
     }
@@ -406,7 +407,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     $args1 = [];
     try {
       $results1 = $this->chado_connection->query($sql1, $args1);
-    } catch (Exception $e) {
+    }
+    catch (Exception $e) {
       return [1, $e->getMessage()];
     }
 
@@ -418,8 +420,9 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
         $sql2 = "UPDATE {1:organism} SET abbreviation=:abbreviation WHERE organism_id=:organism_id";
         $args2 = [':abbreviation' => $sciname, ':organism_id' => $organism_id];
         try {
-          $results2 = $this->chado_connection->query($sql2, $args2);
-        } catch (Exception $e) {
+          $this->chado_connection->query($sql2, $args2);
+        }
+        catch (Exception $e) {
           return [1, $e->getMessage()];
         }
         $nupdated++;
@@ -462,7 +465,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     $args = [];
     try {
       $results = $this->chado_connection->query($sql, $args);
-    } catch (Exception $e) {
+    }
+    catch (Exception $e) {
       return [1, $e->getMessage()];
     }
 
@@ -472,7 +476,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       $feature_id = $obj->feature_id;
       $residues = $obj->residues;
       if (preg_match('/([^ABCDEFGHIKLMNPQRSTVWXYZabcdefghiklmnpqrstvwxyz\*])/', $residues, $matches)) {
-        $errors .= '<br>Invalid residue "'.$matches[1].'" in feature '.$feature_id;
+        $errors .= '<br>Invalid residue "' . $matches[1] . '" in feature ' . $feature_id;
         $nerrors++;
       }
       else {
@@ -481,7 +485,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     }
 
     // If no errors, proceed with the update.
-    if ( (!$nerrors) and ($nupdated) ) {
+    if ((!$nerrors) and ($nupdated)) {
       $sql = "UPDATE {1:feature}"
            . " SET seqlen=CHAR_LENGTH(residues), md5checksum=MD5(residues)"
            . " WHERE (residues = '') IS FALSE"
@@ -490,15 +494,109 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       $args = [];
       try {
         $results = $this->chado_connection->query($sql, $args);
-      } catch (Exception $e) {
+      }
+      catch (Exception $e) {
         return [1, $e->getMessage()];
       }
     }
     else {
       $nupdated = 0;
     }
-    $status = t('Updated @nupdated features, @nerrors errors',
+    $status = $this->t('Updated @nupdated features, @nerrors errors',
                 ['@nupdated' => $nupdated, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Generate featureprop entries for QTL.
+   *
+   * These use the MAIN::published_symbol cvterm if they are of the format
+   * MK012345 anytext.
+   */
+  protected function qtlAbbrev() {
+    $errors = '';
+    $property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
+
+    // Get cvterm_id for QTL.
+    $qtl_type_id = $this->lookupCvterm('QTL', 'sequence');
+
+    // Get cvterm_id to use for featureprop table from MAIN::published_symbol.
+    $symbol_type_id = $this->lookupCvterm('published_symbol', 'MAIN');
+
+    // Retrieve an array of all QTL lacking the published_symbol property
+    // the query retrieves all QTL featureprop, and in the loop flag those
+    // that already have a published_symbol.
+    $sql = "SELECT DISTINCT F.feature_id, F.name, F.uniquename, FP.type_id FROM {1:feature} F"
+         . " LEFT JOIN {1:featureprop} FP ON F.feature_id=FP.feature_id"
+         . " WHERE F.type_id=:qtl_type_id";
+    $args = [':qtl_type_id' => $qtl_type_id];
+    try {
+      $results = $this->chado_connection->query($sql, $args);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    $qtls = [];
+    // We will often iterate the same feature_id multiple times
+    // due to multiple featureprop records.
+    while ($obj = $results->fetchObject()) {
+      $qtls[$obj->feature_id]['name'] = $obj->uniquename;
+      if ($obj->type_id == $symbol_type_id) {
+        $qtls[$obj->feature_id]['exclude'] = 1;
+      }
+    }
+
+    // Loop to add missing published_symbol entries to the featureprop table.
+    // All added lines will have rank 0. Since they are new, there is no
+    // possibility of conflict.
+    $rank = 0;
+    $nadded = 0;
+    $nskipped = 0;
+    $nerrors = 0;
+    foreach ($qtls as $feature_id => $record) {
+      $uniquename = $record['name'];
+      // Defined only when excluded.
+      $exclude = array_key_exists('exclude', $record);
+      // Skip if excluded because it already has a published_symbol.
+      if (!$exclude) {
+        // Derive name by removing the 'MK012345 ' portion.
+        // If that's missing, skip it.
+        if (preg_match('/^MK\d{6} (.*)/', $uniquename, $matches)) {
+          $published_symbol = $matches[1];
+          if ($published_symbol) {
+            $values = [
+              'featureprop.feature_id' => $feature_id,
+              'featureprop.type_id' => $symbol_type_id,
+              'featureprop.value' => $published_symbol,
+              'featureprop.rank' => $rank,
+            ];
+            try {
+              $result = $property_buddy->insertProperty('feature', $feature_id, $values, []);
+              if ($result) {
+                $nadded++;
+              }
+              else {
+                $nerrors++;
+              }
+            }
+            catch (Exception $e) {
+              $nerrors++;
+              $errors .= '<br />' . $e->getMessage();
+            }
+          }
+          else {
+            $errors .= "Unparseable name \"$uniquename\"<br>";
+            $nerrors++;
+          }
+        }
+        else {
+          $nskipped++;
+        }
+      }
+    }
+
+    $status = $this->t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
+                ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
     return [$nerrors, $status . $errors];
   }
 
