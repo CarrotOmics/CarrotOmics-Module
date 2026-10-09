@@ -163,85 +163,82 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '#suffix' => "<hr>",
     ];
 
-    // ;;;
-    if (FALSE) {
-      // Add a 'Generate biomaterial_analysis links' button.
-      $form['biomaterial_analysis_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'biomaterial_analysis_btn',
-        '#value' => 'Generate biomaterial_analysis links',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Generate links in the chado.biomaterial_analysis custom table"
-        . " using projects common to both."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Generate biomaterial_analysis links' button.
+    $form['biomaterial_analysis_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'biomaterial_analysis_btn',
+      '#value' => 'Generate biomaterial_analysis links',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Generate links in the chado.biomaterial_analysis custom table"
+      . " using projects common to both."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-      // Add a 'Generate biomaterial_stock links' button.
-      $form['biomaterial_stock_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'biomaterial_stock_btn',
-        '#value' => 'Generate biomaterial_stock links',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Generate links in the chado.biomaterial_stock custom table"
-        . " when the stock is present in the biomaterial description."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Generate biomaterial_stock links' button.
+    $form['biomaterial_stock_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'biomaterial_stock_btn',
+      '#value' => 'Generate biomaterial_stock links',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Generate links in the chado.biomaterial_stock custom table"
+      . " when the stock is present in the biomaterial description."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-      // Add a 'Generate stock_analysis links' button.
-      $form['stock_analysis_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'stock_analysis_btn',
-        '#value' => 'Generate stock_analysis links',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Generate links in the chado.stock_analysis custom table using"
-        . " stocks created for phylogenetic trees. Links for both the"
-        . " tree analysis and study analysis are made."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Generate stock_analysis links' button.
+    $form['stock_analysis_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'stock_analysis_btn',
+      '#value' => 'Generate stock_analysis links',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Generate links in the chado.stock_analysis custom table using"
+      . " stocks created for phylogenetic trees. Links for both the"
+      . " tree analysis and study analysis are made."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-      // Add a 'Generate map properties' button.
-      $form['map_prop_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'map_prop_btn',
-        '#value' => 'Generate map properties',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Generate chado properties for maps. These are:"
-        . " Number of markers,"
-        . " Number of linkage groups."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Generate map properties' button.
+    $form['map_prop_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'map_prop_btn',
+      '#value' => 'Generate map properties',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Generate chado properties for maps. These are:"
+      . " Number of markers,"
+      . " Number of linkage groups."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-      // Add a 'Assign organisms to phylonodes' button.
-      $form['phylo_organism_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'phylo_organism_btn',
-        '#value' => 'Assign organisms to phylonodes',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Phylogenetic tree taxonomic tree leaf nodes will be assigned to"
-        . " organisms in the phylotree_organism table if such association"
-        . " does not already exist."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Assign organisms to phylonodes' button.
+    $form['phylo_organism_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'phylo_organism_btn',
+      '#value' => 'Assign organisms to phylonodes',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Phylogenetic tree taxonomic tree leaf nodes will be assigned to"
+      . " organisms in the phylotree_organism table if such association"
+      . " does not already exist."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-      // Add a 'Transfer from featuremap_stock to stock_featuremap' button.
-      $form['featuremap_stock_btn'] = [
-        '#type' => 'submit',
-        '#name' => 'featuremap_stock_btn',
-        '#value' => 'Transfer from featuremap_stock to stock_featuremap',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Move linker records from the mainlab tripal table"
-        . " chado.featuremap_stock to the core tripal table"
-        . " chado.stock_featuremap."
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
+    // Add a 'Transfer from featuremap_stock to stock_featuremap' button.
+    $form['featuremap_stock_btn'] = [
+      '#type' => 'submit',
+      '#name' => 'featuremap_stock_btn',
+      '#value' => 'Transfer from featuremap_stock to stock_featuremap',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Move linker records from the mainlab tripal table"
+      . " chado.featuremap_stock to the core tripal table"
+      . " chado.stock_featuremap."
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
-    } // ;;;
     return $form;
   }
 
@@ -277,22 +274,22 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->geneticMarkerMarkerLocusFix();
     }
     elseif ($triggering_element == 'biomaterial_analysis_btn') {
-      [$nerrors, $status] = carrotomics_admin_biomaterial_analysis_linker();
+      [$nerrors, $status] = $this->biomaterialAnalysisLinker();
     }
     elseif ($triggering_element == 'biomaterial_stock_btn') {
-      [$nerrors, $status] = carrotomics_admin_biomaterial_stock_linker();
+      [$nerrors, $status] = $this->biomaterialStockLinker();
     }
     elseif ($triggering_element == 'stock_analysis_btn') {
-      [$nerrors, $status] = carrotomics_admin_stock_analysis_linker();
+      [$nerrors, $status] = $this->stockAnalysisLinker();
     }
     elseif ($triggering_element == 'map_prop_btn') {
-      [$nerrors, $status] = carrotomics_admin_generate_featuremapprop();
+      [$nerrors, $status] = $this->generateFeaturemapprop();
     }
     elseif ($triggering_element == 'phylo_organism_btn') {
-      [$nerrors, $status] = carrotomics_admin_phylotree_organism();
+      [$nerrors, $status] = $this->phylotreeOrganism();
     }
     elseif ($triggering_element == 'featuremap_stock_btn') {
-      [$nerrors, $status] = carrotomics_admin_featuremap_stock();
+      [$nerrors, $status] = $this->featuremapStock();
     }
     else {
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
@@ -364,23 +361,23 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     $tables = ['stockprop', 'eimageprop'];
 
     // First get number of matching records that we will delete.
-    $sql1 = "SELECT COUNT(*) FROM {organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {dbxref} WHERE accession='NULL')";
+    $sql1 = "SELECT COUNT(*) FROM {1:organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {1:dbxref} WHERE accession='NULL')";
     $args1 = [];
     $count = $this->chado_connection->query($sql1, $args1)->fetchField();
     // If count is not zero, delete the offending records.
     if ($count) {
-      $sql2 = "DELETE FROM {organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {dbxref} WHERE accession='NULL')";
+      $sql2 = "DELETE FROM {1:organism_dbxref} WHERE dbxref_id in (SELECT dbxref_id FROM {1:dbxref} WHERE accession='NULL')";
       $args2 = [];
       $this->chado_connection->query($sql2, $args2);
     }
     // For each properties table, count and then delete records
     // having a NULL value.
     foreach ($tables as $table) {
-      $sql3 = 'SELECT COUNT(*) FROM {' . $table . '} WHERE value IS NULL';
+      $sql3 = 'SELECT COUNT(*) FROM {1:' . $table . '} WHERE value IS NULL';
       $args3 = [];
       $nullcount = $this->chado_connection->query($sql3, $args3)->fetchField();
       if ($nullcount) {
-        $sql4 = 'DELETE FROM {' . $table . '} WHERE value IS NULL';
+        $sql4 = 'DELETE FROM {1:' . $table . '} WHERE value IS NULL';
         $args4 = [];
         $this->chado_connection->query($sql4, $args4);
         $count += $nullcount;
@@ -695,6 +692,567 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     [
       '@nupdated_g_m' => $nupdated_g_m,
       '@nupdated_m_l' => $nupdated_m_l,
+      '@nerrors' => $nerrors,
+    ]);
+    return [$nerrors, $status . $errors];
+  }
+
+  // @@@;;;
+
+  /**
+   * Generate entries in the chado.biomaterial_analysis custom table.
+   *
+   * This information is derived from projects that have biomaterial
+   * and analyses in common.
+   */
+  protected function biomaterialAnalysisLinker() {
+    $nexisting = 0;
+    $nadded = 0;
+    $nerrors = 0;
+    $errors = '';
+
+    // Get count of existing links.
+    $sql1 = "SELECT COUNT(*) FROM {1:biomaterial_analysis}";
+    $args1 = [];
+    $nexisting = $this->chado_connection->query($sql1, $args1)->fetchField();
+
+    // Find all projects linked to biomaterial.
+    $sql2 = "SELECT DISTINCT BP.biomaterial_id, PA.analysis_id"
+          . " FROM {1:biomaterial_project} BP"
+          . " LEFT JOIN {1:project_analysis} PA ON BP.project_id=PA.project_id"
+          . " LEFT JOIN {1:biomaterial_analysis} BA ON BP.biomaterial_id=BA.biomaterial_id"
+          . "   AND PA.analysis_id=BA.analysis_id"
+          . " WHERE BA.biomaterial_analysis_id IS NULL";
+    $args2 = [];
+    $records = $this->chado_connection->query($sql2, $args2);
+    if ($records) {
+      while ($record = $records->fetchObject()) {
+        $biomaterial_id = $record->biomaterial_id;
+        $analysis_id = $record->analysis_id;
+        // If project does not have any analyses, analysis_id will be null.
+        if ($biomaterial_id and $analysis_id) {
+          $sql3 = "INSERT INTO {1:biomaterial_analysis} (biomaterial_id, analysis_id)"
+                . " VALUES (:biomaterial_id, :analysis_id)";
+          $args3 = [
+            ':biomaterial_id' => $biomaterial_id,
+            ':analysis_id' => $analysis_id,
+          ];
+          try {
+            $this->chado_connection->query($sql3, $args3);
+          }
+          catch (Exception $e) {
+            return [1, $e->getMessage()];
+          }
+          $nadded++;
+        }
+      }
+    }
+
+    $status = $this->t('Found @nexisting existing links, added @nadded links, @nerrors errors',
+      ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Generate entries in the chado.biomaterial_stock custom table.
+   *
+   * This information is derived from biomaterials that have a link to an
+   * analysis which has the germplasm accession in the biomaterial name,
+   * such as: NCBI accession KX832329; Daucus conchitae voucher PI 652367
+   * plastid, complete genome.
+   */
+  protected function biomaterialStockLinker() {
+    $nexisting = 0;
+    $nadded = 0;
+    $nerrors = 0;
+    $errors = '';
+
+    // Get cvterm_id for relationship::instance_of (50973).
+    $instance_of_type_id = $this->lookupCvterm('instance_of', 'relationship');
+
+    // Get count of existing links.
+    $sql1 = "SELECT COUNT(*) FROM {1:biomaterial_stock}";
+    $args1 = [];
+    try {
+      $nexisting = $this->chado_connection->query($sql1, $args1)->fetchField();
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+
+    // Find all biomaterials that do not already have a link.
+    $sql2 = "SELECT B.biomaterial_id, A.name FROM {1:biomaterial} B"
+          . " LEFT JOIN {1:biomaterial_stock} BS ON B.biomaterial_id=BS.biomaterial_id"
+          . " LEFT JOIN {1:biomaterial_analysis} BA ON B.biomaterial_id=BA.biomaterial_id"
+          . " LEFT JOIN {1:analysis} A ON BA.analysis_id=A.analysis_id"
+          . " WHERE BS.stock_id IS NULL";
+    $args2 = [];
+    try {
+      $records2 = $this->chado_connection->query($sql2, $args2);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    while ($record2 = $records2->fetchObject()) {
+      $biomaterial_id = $record2->biomaterial_id;
+      $analysis_name = $record2->name;
+      // If no linked analysis, there is nothing to check.
+      if ($analysis_name) {
+        // Parse the name for know accession formats.
+        $patterns = ['/(PI \d+)/', '/(Ames \d+)/'];
+        foreach ($patterns as $pattern) {
+          if (preg_match($pattern, $analysis_name, $matches)) {
+            $accession = $matches[1];
+            // See if this stock exists.
+            $sql3 = "SELECT stock_id FROM {1:stock} WHERE LOWER(uniquename) = LOWER(:accession)";
+            $args3 = [':accession' => $accession];
+            $stock_id = $this->chado_connection->query($sql3, $args3)->fetchField();
+            if ($stock_id) {
+              // We have a match, and we know there is no existing one because
+              // of the IS NULL in $sql2, so we can insert it.
+              $sql4 = "INSERT INTO {1:biomaterial_stock} (biomaterial_id, stock_id, type_id)"
+                    . " VALUES (:biomaterial_id, :stock_id, :type_id)";
+              $args4 = [
+                ':biomaterial_id' => $biomaterial_id,
+                ':stock_id' => $stock_id,
+                ':type_id' => $instance_of_type_id,
+              ];
+              try {
+                $this->chado_connection->query($sql4, $args4);
+              }
+              catch (Exception $e) {
+                return [1, $e->getMessage()];
+              }
+              $nadded++;
+            }
+          }
+        }
+      }
+    }
+
+    $status = $this->t('Found @nexisting existing links, added @nadded links, @nerrors errors',
+      ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Generate entries in the chado.stock_analysis custom table.
+   *
+   * These entries are used by the local__stock_analysis field to link a stock
+   * to any analyses using that stock. Here entries are derived from
+   * phylogenetic trees.
+   */
+  protected function stockAnalysisLinker() {
+    // @todo now that TreeBase studies are projects, does this still work?
+    $nexisting = 0;
+    $nadded = 0;
+    // Redundant, due to multiple trees per study.
+    $nduplicated = 0;
+    $nerrors = 0;
+    $errors = '';
+    // More efficient to cache added values locally.
+    $previously_added = [];
+
+    // Get cvterm_id for 'part_of' from the 'relationship' CV, which
+    // is used to link tree analyses to the parent study analysis.
+    $part_of_id = $this->lookupCvterm('part_of', 'relationship');
+
+    // Starting from phylotree nodes, retrieve linked features from which we
+    // can find linked stock entries. Existing links are returned so that we
+    // can count them to display in the summary output.
+    $sql = "SELECT FS.stock_id, T.analysis_id, R.object_id AS parent_analysis_id,"
+      . "   R.type_id, SA1.stock_analysis_id AS existing1, SA2.stock_analysis_id AS existing2"
+      . " FROM {1:phylonode} N"
+      . " LEFT JOIN {1:feature} F ON N.feature_id=F.feature_id"
+      . " LEFT JOIN {1:feature_stock} FS ON F.feature_id=FS.feature_id"
+      . " LEFT JOIN {1:phylotree} T ON N.phylotree_id=T.phylotree_id"
+      . " LEFT JOIN {1:analysis_relationship} R ON R.subject_id=T.analysis_id"
+      . " LEFT JOIN {1:stock_analysis} SA1 ON FS.stock_id=SA1.stock_id AND T.analysis_id=SA1.analysis_id"
+      . " LEFT JOIN {1:stock_analysis} SA2 ON FS.stock_id=SA2.stock_id AND R.object_id=SA2.analysis_id"
+      . " WHERE N.feature_id IS NOT NULL"
+      . " ORDER BY N.phylotree_id";
+    $args = [];
+    try {
+      $results = $this->chado_connection->query($sql, $args);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    while ($obj = $results->fetchObject()) {
+      $stock_id = $obj->stock_id;
+      $analysis_id = $obj->analysis_id;
+      $parent_analysis_id = $obj->parent_analysis_id;
+
+      // Child analysis.
+      if ($analysis_id) {
+        if ($obj->existing1) {
+          $nexisting++;
+        }
+        elseif (array_key_exists($stock_id . ':' . $analysis_id, $previously_added)) {
+          $nduplicated++;
+        }
+        else {
+          $values = ['stock_id' => $stock_id, 'analysis_id' => $analysis_id];
+          if (chado_insert_record('stock_analysis', $values, [])) {
+            $nadded++;
+            $previously_added[$stock_id . ':' . $analysis_id] = 1;
+          }
+          else {
+            $nerrors++;
+          }
+        }
+      }
+
+      // Parent analysis, relationship type must be correct.
+      if (($parent_analysis_id) and ($obj->type_id) and ($obj->type_id == $part_of_id)) {
+        if ($obj->existing2) {
+          $nexisting++;
+        }
+        elseif (array_key_exists($stock_id . ':' . $parent_analysis_id, $previously_added)) {
+          $nduplicated++;
+        }
+        else {
+          $values = ['stock_id' => $stock_id, 'analysis_id' => $parent_analysis_id];
+//@todo;;;
+          if (chado_insert_record('stock_analysis', $values, [])) {
+            $nadded++;
+            $previously_added[$stock_id . ':' . $parent_analysis_id] = 1;
+          }
+          else {
+            $nerrors++;
+          }
+        }
+      }
+    }
+
+    $status = $this->t('Found @nexisting existing links, added @nadded links, ignored @nduplicated redundant links, @nerrors errors',
+    [
+      '@nexisting' => $nexisting,
+      '@nadded' => $nadded,
+      '@nerrors' => $nerrors,
+      '@nduplicated' => $nduplicated,
+    ]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Generate properties for the chado.featuremapprop table.
+   */
+  protected function generateFeaturemapprop() {
+    $nmaps = 0;
+    $nexisting = 0;
+    $nadded = 0;
+    $nerrors = 0;
+    $errors = '';
+
+    // Get cvterm_id values for properties to be added.
+    $marker_count_id = $this->lookupCvterm('Number of markers', 'local');
+    $marker_type_count_id = $this->lookupCvterm('Type and Number of Markers', 'local');
+    $qtl_count_id = $this->lookupCvterm('Number of quantitative trait loci', 'local');
+    $mtl_count_id = $this->lookupCvterm('Number of mendelian trait loci', 'local');
+    $linkage_group_count_id = $this->lookupCvterm('Number of linkage groups', 'local');
+
+    // Generate a list of featuremap_id values to process.
+    $sql1 = "SELECT M.featuremap_id FROM {1:featuremap} M";
+    $args1 = [];
+    try {
+      $results1 = $this->chado_connection->query($sql1, $args1);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    $featuremap_ids = [];
+    while ($obj = $results1->fetchObject()) {
+      $featuremap_ids[] = $obj->featuremap_id;
+      $nmaps++;
+    }
+
+    // Retrieve all existing properties.
+    $sql2 = "SELECT P.featuremap_id, P.type_id, P.value, P.rank FROM {1:featuremapprop} P"
+          . " WHERE P.type_id IN (:t1, :t2, :t3, :t4, :t5)";
+    $args2 = [
+      ':t1' => $marker_count_id,
+      ':t2' => $qtl_count_id,
+      ':t3' => $mtl_count_id,
+      ':t4' => $linkage_group_count_id,
+      ':t5' => $marker_type_count_id,
+    ];
+    try {
+      $results2 = $this->chado_connection->query($sql2, $args2);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    $properties = [];
+    while ($obj = $results2->fetchObject()) {
+      $properties[$obj->featuremap_id][$obj->type_id][$obj->rank] = $obj->value;
+      $nexisting++;
+    }
+
+    // For each map, generate and store missing properties.
+    foreach ($featuremap_ids as $featuremap_id) {
+
+      // Number of linkage groups.
+      if (!array_key_exists($featuremap_id, $properties) or !array_key_exists($linkage_group_count_id, $properties[$featuremap_id])) {
+        $sql3 = "SELECT COUNT(DISTINCT(F.uniquename)) AS linkage_group_count FROM {1:featurepos} FP"
+              . " LEFT JOIN {1:feature} F ON FP.map_feature_id=F.feature_id"
+              . " WHERE FP.featuremap_id=:featuremap_id";
+        $args3 = [':featuremap_id' => $featuremap_id];
+        $linkage_group_count = $this->chado_connection->query($sql3, $args3)->fetchField();
+        if ($linkage_group_count) {
+          $sql4 = "INSERT INTO {1:featuremapprop} (featuremap_id, type_id, value, rank)"
+                . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+          $args4 = [
+            ':featuremap_id' => $featuremap_id,
+            ':type_id' => $linkage_group_count_id,
+            ':value' => $linkage_group_count,
+            ':rank' => 0,
+          ];
+          try {
+            // @todo check, was args3 for tripal3!
+            $this->chado_connection->query($sql4, $args4);
+          }
+          catch (Exception $e) {
+            return [1, $e->getMessage()];
+          }
+          $nadded++;
+        }
+        else {
+          $nerrors++;
+          $errors .= " Map $featuremap_id has no linkage groups";
+        }
+      }
+
+      // These three properties can share common SQL.
+      $props = [
+        'marker_locus' => $marker_count_id,
+        'QTL' => $qtl_count_id,
+        'heritable_phenotypic_marker' => $mtl_count_id,
+      ];
+      foreach ($props as $name => $type_id) {
+        if (!array_key_exists($featuremap_id, $properties) or !array_key_exists($type_id, $properties[$featuremap_id])) {
+          $sql5 = "SELECT COUNT(*) AS marker_count FROM {1:featurepos} FP"
+                . " LEFT JOIN {1:feature} F ON FP.feature_id=F.feature_id"
+                . " LEFT JOIN {1:cvterm} T ON F.type_id=T.cvterm_id"
+                . " WHERE T.name=:name AND FP.featuremap_id=:featuremap_id";
+          $args5 = [':name' => $name, ':featuremap_id' => $featuremap_id];
+          $count = $this->chado_connection->query($sql5, $args5)->fetchField();
+          // Here a count of zero is valid, e.g. no QTL on this map.
+          $sql6 = "INSERT INTO {1:featuremapprop} (featuremap_id, type_id, value, rank)"
+                . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+          $args6 = [
+            ':featuremap_id' => $featuremap_id,
+            ':type_id' => $type_id,
+            ':value' => $count,
+            ':rank' => 0,
+          ];
+          try {
+            $this->chado_connection->query($sql6, $args6);
+          }
+          catch (Exception $e) {
+            return [1, $e->getMessage()];
+          }
+          $nadded++;
+        }
+      }
+    }
+    // Generate counts of each marker type.
+    $sql7 = "SELECT P.featuremap_id, FP.value, COUNT(FP.value) AS count FROM {1:featureprop} FP"
+          . " LEFT JOIN {1:feature_relationship} FR ON FP.feature_id=FR.object_id"
+          . " LEFT JOIN {1:featurepos} P ON FR.subject_id=P.feature_id"
+          . " WHERE FR.type_id=(SELECT cvterm_id FROM {1:cvterm} WHERE name='instance_of' AND cv_id=(SELECT cv_id FROM {1:cv} WHERE name='relationship'))"
+          . " AND FP.type_id=(SELECT cvterm_id FROM {1:cvterm} WHERE name='marker_type' AND cv_id=(SELECT cv_id FROM {1:cv} WHERE name='MAIN'))"
+          . " AND P.featuremap_id IS NOT NULL"
+          . " GROUP BY FP.value, P.featuremap_id"
+          . " ORDER BY P.featuremap_id, COUNT(FP.value) DESC";
+    $args7 = [];
+    try {
+      $results7 = $this->chado_connection->query($sql7, $args7);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    $curr_map = 0;
+    $curr_rank = 1;
+    while ($obj = $results7->fetchObject()) {
+      // Keep track of a value for rank.
+      $curr_rank++;
+      if ($curr_map != $obj->featuremap_id) {
+        $curr_map = $obj->featuremap_id;
+        $curr_rank = 1;
+      }
+
+      // Displayed value will be type: count, e.g. 'AFLP: 123'.
+      $display_value = $obj->value . ': ' . $obj->count;
+
+      // Only add if not already present.
+      if (!array_key_exists($obj->featuremap_id, $properties)
+          or !array_key_exists($marker_type_count_id, $properties[$obj->featuremap_id])
+          or !array_key_exists($curr_rank, $properties[$obj->featuremap_id][$marker_type_count_id])) {
+        $sql8 = "INSERT INTO {1:featuremapprop} (featuremap_id, type_id, value, rank)"
+              . " VALUES (:featuremap_id, :type_id, :value, :rank)";
+        $args8 = [
+          ':featuremap_id' => $obj->featuremap_id,
+          ':type_id' => $marker_type_count_id,
+          ':value' => $display_value,
+          ':rank' => $curr_rank,
+        ];
+        try {
+          $this->chado_connection->query($sql8, $args8);
+        }
+        catch (Exception $e) {
+          return [1, $e->getMessage()];
+        }
+        $nadded++;
+      }
+    }
+
+    $status = $this->t('For @nmaps maps, @nexisting properties exist, added @nadded properties, @nerrors errors',
+      ['@nmaps' => $nmaps, '@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Generate links in the chado.phylotree_organism table.
+   *
+   * These links are  based on leaf node names for taxonomic trees.
+   */
+  protected function phylotreeOrganism() {
+    $errors = '';
+    $nerrors = 0;
+    $nadded = 0;
+    $nfailed = 0;
+
+    // Get cvterm_id for "taxonomic" trees.
+    $tree_type_id = $this->lookupCvterm('Species tree', 'EDAM');
+
+    // Get cvterm_id for leaf nodes.
+    // For tripal 3 the CV was tripal_phylogeny, this was migrated by #1727.
+    $leaf_type_id = $this->lookupCvterm('phylo_leaf', 'local');
+
+    // Retrieve an array of all candidate leaf nodes without existing
+    // links in the phylonode_organism table, that are in "taxonomic"
+    // ("Species_tree") trees.
+    $sql = "SELECT PN.phylonode_id, PN.label FROM {1:phylonode} PN"
+         . " LEFT JOIN {1:phylotree} PT ON PN.phylotree_id = PT.phylotree_id"
+         . " LEFT JOIN {1:phylonode_organism} PO ON PN.phylonode_id=PO.phylonode_id"
+         . " WHERE PT.type_id=:tree_id"
+         . " AND PN.type_id=:node_id"
+         . " AND PO.organism_id IS NULL";
+    $args = [':tree_id' => $tree_type_id, ':node_id' => $leaf_type_id];
+    try {
+      $results = $this->chado_connection->query($sql, $args);
+    }
+    catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+    while ($obj = $results->fetchObject()) {
+      $phylonode_id = $obj->phylonode_id;
+      $label = $obj->label;
+      $organism_ids = chado_get_organism_id_from_scientific_name($label, []);
+      if ($organism_ids) {
+        try {
+          $values = [
+            'phylonode_id' => $phylonode_id,
+            'organism_id' => $organism_ids[0],
+          ];
+          $result = chado_insert_record('phylonode_organism', $values);
+          if ($result) {
+            $nadded++;
+          }
+          else {
+            $nerrors++;
+          }
+        }
+        catch (Exception $e) {
+          $nerrors++;
+          $errors .= '<br />' . $e->getMessage();
+        }
+      }
+      else {
+        $nfailed++;
+        $errors .= '<br />Unable to look up ' . $label;
+      }
+    }
+
+    $status = $this->t('Added @nadded organism links, @nfailed unable to determine organism, @nerrors errors',
+      ['@nadded' => $nadded, '@nfailed' => $nfailed, '@nerrors' => $nerrors]);
+    return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Move linker records from the mainlab tripal table chado.featuremap_stock.
+   *
+   * These records are moved to the core tripal table chado.stock_featuremap.
+   */
+  protected function featuremapStock() {
+    $errors = '';
+    $nerrors = 0;
+    $nexisting = 0;
+    $nadded = 0;
+    $nremoved = 0;
+
+    // Get count of existing links.
+    $sql1 = "SELECT COUNT(*) FROM {1:stock_featuremap}";
+    $args1 = [];
+    $nexisting = $this->chado_connection->query($sql1, $args1)->fetchField();
+
+    // Parse each link in the mainlab tripal featuremap_stock table
+    // The schema does not seem to exist, so need chado. prefix.
+    $sql2 = "SELECT FS.featuremap_stock_id, FS.featuremap_id AS fs_featuremap_id, FS.stock_id AS fs_stock_id,"
+          . " S.type_id,"
+          . " SF.stock_featuremap_id, SF.featuremap_id AS sf_featuremap_id, SF.stock_id AS sf_stock_id, SF.type_id AS sf_type_id"
+          . " FROM {1:featuremap_stock} FS"
+          . " LEFT JOIN {1:stock} S ON FS.stock_id=S.stock_id"
+          . " LEFT JOIN {1:stock_featuremap} SF ON"
+          . " FS.featuremap_id=SF.featuremap_id AND FS.stock_id=SF.stock_id";
+    $args2 = [];
+    $records = $this->chado_connection->query($sql2, $args2);
+    if ($records) {
+      while ($record = $records->fetchObject()) {
+
+        // Does not exist in stock_featuremap, add it.
+        if (!$record->stock_featuremap_id) {
+          $sql3 = "INSERT INTO {1:stock_featuremap}"
+                . " (featuremap_id, stock_id, type_id)"
+                . " VALUES (:featuremap_id, :stock_id, :type_id)";
+          $args3 = [
+            ':featuremap_id' => $record->fs_featuremap_id,
+            ':stock_id' => $record->fs_stock_id,
+            ':type_id' => $record->type_id,
+          ];
+          try {
+            $this->chado_connection->query($sql3, $args3);
+          }
+          catch (Exception $e) {
+            $nerrors++;
+            $errors .= $e->getMessage();
+          }
+          $nadded++;
+        }
+
+        // If no problems, delete it from featuremap_stock.
+        if (!$nerrors) {
+          $sql4 = "DELETE FROM {1:featuremap_stock}"
+                . " WHERE featuremap_stock_id = :featuremap_stock_id";
+          $args4 = [':featuremap_stock_id' => $record->featuremap_stock_id];
+          try {
+            $this->chado_connection->query($sql4, $args4);
+          }
+          catch (Exception $e) {
+            $nerrors++;
+            $errors .= $e->getMessage();
+          }
+          $nremoved++;
+        }
+      }
+    }
+
+    $status = $this->t('Found @nexisting existing links in core tripal stock_featuremap, added @nadded links to stock_featuremap, removed @nremoved links from mainlab tripal featuremap_stock, @nerrors errors',
+    [
+      '@nexisting' => $nexisting,
+      '@nadded' => $nadded,
+      '@nremoved' => $nremoved,
       '@nerrors' => $nerrors,
     ]);
     return [$nerrors, $status . $errors];
