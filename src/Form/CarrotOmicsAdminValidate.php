@@ -12,6 +12,8 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalEntityLookup;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
+use Drupal\tripal\TripalStorage\PluginManager\TripalStorageManager;
+use Drupal\tripal_chado\Plugin\TripalStorage\ChadoStorage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -41,6 +43,13 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
   protected FileSystem $file_system;
 
   /**
+   * Tripal storage manager service.
+   *
+   * @var Drupal\tripal\TripalStorage\PluginManager\TripalStorageManager
+   */
+  protected TripalStorageManager $tripal_storage_manager;
+
+  /**
    * CarrotOmicsAdminValidate class constructor.
    *
    * Prepares injected services.
@@ -55,11 +64,13 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     EntityFieldManager $entity_field_manager,
     EntityTypeBundleInfo $bundle_info,
     FileSystem $file_system,
+    TripalStorageManager $tripal_storage_manager,
   ) {
     parent::__construct($config_factory, $drupal_connection, $chado_connection, $entity_lookup_manager, $logger, $publish_manager);
     $this->entity_field_manager = $entity_field_manager;
     $this->bundle_info = $bundle_info;
     $this->file_system = $file_system;
+    $this->tripal_storage_manager = $tripal_storage_manager;
   }
 
   /**
@@ -76,6 +87,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       $container->get('entity_field.manager'),
       $container->get('entity_type.bundle.info'),
       $container->get('file_system'),
+      $container->get('tripal.storage'),
     );
   }
 
@@ -114,7 +126,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     $form['val_find_unpub_btn'] = [
       '#type'   => 'submit',
       '#name'   => 'val_find_unpub_btn',
-      '#value'  => 'Find Unpublished Content (NOT MIGRATED)',
+      '#value'  => 'Find Unpublished Content',
       '#prefix' => '<div style="padding-top:30px;"><em>'
       . "List any Tripal content types that have unpublished content"
       . "</em></div><br />",
@@ -125,7 +137,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     $form['val_bundle_id'] = [
       '#type'   => 'select',
       '#name' => 'val_bundle_id',
-      '#options' => $this->getBundleNames(),
+      '#options' => $this->getBundleNames(TRUE),
       '#prefix' => '<div style="padding-top:30px;"><em>'
       . 'Finds chado records that have been published as more than one entity.'
       . '</em></div><br />',
@@ -138,22 +150,18 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       '#suffix' => '<hr>',
     ];
 
-    // @todo implement.
-    if (FALSE) {
-      // Add a 'Validate CarrotOmics accessions' button.
-      $form['val_car_acc_btn'] = [
-        '#type'   => 'submit',
-        '#name'   => 'val_car_acc_btn',
-        '#value'  => 'Validate CarrotOmics accessions',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "For stock items using the CarrotOmics database,"
-        . " update the accession in dbxref to match the"
-        . " cvterm and CarrotOmics entity e.g. accession/123456"
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
-
-    }
+    // Add a 'Validate CarrotOmics accessions' button.
+    $form['val_car_acc_btn'] = [
+      '#type'   => 'submit',
+      '#name'   => 'val_car_acc_btn',
+      '#value'  => 'Validate CarrotOmics accessions (UPDATE DISABLED FOR NOW)',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "For stock items using the CarrotOmics database,"
+      . " update the accession in dbxref to match the"
+      . " cvterm and CarrotOmics entity e.g. accession/123456"
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
     // Add a 'Validate public:// fileloc entries' button.
     $form['val_fileloc_btn'] = [
@@ -168,19 +176,16 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       '#suffix' => '<hr>',
     ];
 
-    // @todo implement.
-    if (FALSE) {
-      // Add a 'Validate eimage urls' button.
-      $form['val_eimage_btn'] = [
-        '#type'   => 'submit',
-        '#name'   => 'val_eimage_btn',
-        '#value'  => 'Validate eimage urls',
-        '#prefix' => '<div style="padding-top:30px;"><em>'
-        . "Validate all eimage urls to verify file is present"
-        . "</em></div><br />",
-        '#suffix' => "<hr>",
-      ];
-    }
+    // Add a 'Validate eimage urls' button.
+    $form['val_eimage_btn'] = [
+      '#type'   => 'submit',
+      '#name'   => 'val_eimage_btn',
+      '#value'  => 'Validate eimage urls',
+      '#prefix' => '<div style="padding-top:30px;"><em>'
+      . "Validate all eimage urls to verify file is present"
+      . "</em></div><br />",
+      '#suffix' => "<hr>",
+    ];
 
     return $form;
   }
@@ -188,13 +193,19 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
   /**
    * Gets a list of bundle names.
    *
+   * @param bool $include_select
+   *   If true, include a "--Select--" item.
+   *
    * @return array
    *   The list of bundle names.
    */
-  protected function getBundleNames(): array {
+  protected function getBundleNames(bool $include_select): array {
     $entity_type = 'tripal_entity';
     $bundles = $this->bundle_info->getBundleInfo($entity_type);
-    $select_list = ['' => '--Select--'];
+    $select_list = [];
+    if ($include_select) {
+      $select_list = ['' => '--Select--'];
+    }
     // $select_list = ['all' => '--All Bundles--'];
     foreach ($bundles as $bundle_id => $info) {
       $select_list[$bundle_id] = $info['label'];
@@ -248,149 +259,50 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
    * @todo not migrated!
    */
   protected function findUnpublished() {
-    // This is based on the chado_publish_records() function in
-    // tripal/tripal_chado/api/tripal_chado.api.inc, but we
-    // only go as far as getting the count of unpublished records
+    $chadoStorage = $this->tripal_storage_manager->createInstance('chado_storage');
 
-    // first get a list of defined bio_data bundles
-    $sql = "SELECT name, label FROM tripal_bundle ORDER BY term_id";
-    $results = $this->drupal_connection->query($sql, []);
-    $bundle_names = [];
-    while ($obj = $results->fetchObject()) {
-      $bundle_names[$obj->name] = $obj->label;
-    }
+    // Key is machine name, value is label.
+    $bundles = $this->getBundleNames(FALSE);
 
-    // The output message will be a list of content types that need to
+    // The output messages will be a list of content types that need to
     // be published, it will be empty if everything is already published.
-    $outputmessage = '';
+    $outputmessages = [];
 
-    foreach ($bundle_names as $bundle_name => $bundle_label) {
-      // The following section of code is copied from
-      // tripal/tripal_chado/api/tripal_chado.api.inc function chado_publish_records()
-      // up to the point where we determine the number of publishable records.
+    foreach ($bundles as $bundle_name => $bundle_label) {
+      // Retrieve a list of all pkey values for this bundle.
+      $record_ids = $chadoStorage->findAllRecordIds($bundle_name) ?? 0;
 
-      // Start an array for caching objects to save performance.
-      $cache = [];
+      // Find a required field for the bundle.
+      // Look up entity_ids for the bundle using the drupal field table.
+      $published_ids = $this->entity_lookup_manager->getPublishedEntityIds($bundle_name) ?? 0;
 
-      // Load the bundle entity so we can get information about which Chado
-      // table/field this entity belongs to.
-      $bundle = tripal_load_bundle_entity(['name' => $bundle_name]);
-      $cache['bundle'] = $bundle;
+      // Find the difference between the arrays.
+      $count_diff = count($record_ids) - count($published_ids);
 
-      if (!$bundle) {
-        tripal_report_error($message_type, TRIPAL_ERROR,
-          "Unknown bundle. Could not publish record: @error",
-          ['@error' => 'The bundle name must be provided'], $message_opts);
-        return FALSE;
+      // Report the results.
+      if ($count_diff) {
+        $outputmessages[0][] = $bundles[$bundle_name] . ' (' . $bundle_name . ') has '
+        . number_format($count_diff) . ' unpublished records out of '
+        . number_format(count($record_ids)) . ' total records, '
+        . number_format(count($published_ids)) . ' published.';
       }
-      $chado_entity_table = chado_get_bundle_entity_table($bundle);
-
-      // Get the mapping of the bio data type to the Chado table.
-      $chado_bundle = db_select('chado_bundle', 'cb')
-        ->fields('cb')
-        ->condition('bundle_id', $bundle->id)
-        ->execute()
-        ->fetchObject();
-      if (!$chado_bundle) {
-        tripal_report_error('tripal_chado', TRIPAL_ERROR,
-          "Cannot find mapping of bundle to Chado tables. Could not publish record.");
-        return FALSE;
-      }
-
-      // Load the term for use in setting the alias for each entity created.
-      $term = entity_load('TripalTerm', ['id' => $bundle->term_id]);
-      $cache['term'] = $term;
-
-      $table = $chado_bundle->data_table;
-      $type_column = $chado_bundle->type_column;
-      $type_linker_table = $chado_bundle->type_linker_table;
-      $cvterm_id = $chado_bundle->type_id;
-      $type_value = $chado_bundle->type_value;
-
-      // Get the table information for the Chado table.
-      $table_schema = chado_get_schema($table);
-      $pkey_field = $table_schema['primary key'][0];
-
-      // Construct the SQL for identifying which records should be published.
-      $args = [];
-      $select = "SELECT T.$pkey_field as record_id ";
-      $from = "
-        FROM {1:" . $table . "} T
-          LEFT JOIN [" . $chado_entity_table . "] CE on CE.record_id = T.$pkey_field
-      ";
-
-      $where = " WHERE CE.record_id IS NULL ";
-
-      // Handle records that are mapped to property tables.
-      if ($type_linker_table and $type_column and $type_value) {
-        $propschema = chado_get_schema($type_linker_table);
-        $fkeys = $propschema['foreign keys'][$table]['columns'];
-        foreach ($fkeys as $leftkey => $rightkey) {
-          if ($rightkey == $pkey_field) {
-            $from .= " INNER JOIN {1:" . $type_linker_table . "} LT ON T.$pkey_field = LT.$leftkey ";
-          }
-        }
-        $where .= "AND LT.$type_column = :cvterm_id and LT.value = :prop_value";
-        $args[':cvterm_id'] = $cvterm_id;
-        $args[':prop_value'] = $type_value;
-      }
-
-      // Handle records that are mapped to cvterm linking tables.
-      if ($type_linker_table and $type_column and !$type_value) {
-        $cvtschema = chado_get_schema($type_linker_table);
-        $fkeys = $cvtschema['foreign keys'][$table]['columns'];
-        foreach ($fkeys as $leftkey => $rightkey) {
-          if ($rightkey == $pkey_field) {
-            $from .= " INNER JOIN {1:" . $type_linker_table . "} LT ON T.$pkey_field = LT.$leftkey ";
-          }
-        }
-        $where .= "AND LT.$type_column = :cvterm_id";
-        $args[':cvterm_id'] = $cvterm_id;
-      }
-
-      // Handle records that are mapped via a type_id column in the base table.
-      if (!$type_linker_table and $type_column) {
-        $where .= "AND T.$type_column = :cvterm_id";
-        $args[':cvterm_id'] = $cvterm_id;
-      }
-
-      // Handle the case where records are in the cvterm table and mapped via a single
-      // vocab.  Here we use the type_value for the cv_id.
-      if ($table == 'cvterm' and $type_value) {
-        $where .= "AND T.cv_id = :cv_id";
-        $args[':cv_id'] = $type_value;
-      }
-
-      // Handle the case where records are in the cvterm table but we want to
-      // use all of the child terms.
-      if ($table == 'cvterm' and !$type_value) {
-        $where .= "AND T.cvterm_id IN (
-           SELECT CVTP.subject_id
-           FROM {1:cvtermpath} CVTP
-           WHERE CVTP.object_id = :cvterm_id)
-         ";
-        $args[':cvterm_id'] = $cvterm_id;
-      }
-
-      // First get the count
-      $sql = "SELECT count(*) as num_records " . $from . $where;
-      $result = $this->drupal_connection->query($sql, $args);
-      $count = $result->fetchField();
-
-      // end of copied code
-
-      // Add this bundle to the output message only if $count is > 0
-      if ($count) {   
-        $outputmessage .= "There are $count records to publish for \"$bundle_label\" ($bundle_name)<br>";
+      else {
+        $outputmessages[1][] = $bundles[$bundle_name] . ' (' . $bundle_name . '): ' . number_format(count($record_ids));
       }
     }
 
-    if ($outputmessage) {
-      return [1, $outputmessage];
+    // Put output messages in priority order, unpublished records first.
+    $message = '';
+    $returncode = 0;
+    if ($outputmessages[0] ?? []) {
+      $message = '<strong>The following bundles have unpublished records:</strong>';
+      $message .= $this->flattenErrors($outputmessages[0]);
+      $returncode = count($outputmessages[0]);
     }
-    else {
-      return [0, "There are no tripal content types that need to be published"];
-    }
+    $message .= '<strong>The following bundles are fully published:</strong>';
+    $message .= $this->flattenErrors($outputmessages[1] ?? []);
+
+    return [$returncode, $message];
   }
 
   /**
@@ -424,7 +336,7 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     }
     if (!$required_field) {
       $this->messenger()->addError("No required fields for bundle \"$bundle_id\"");
-      return;
+      return [1, "Error, no required fields for bundle \"$bundle_id\""];
     }
 
     // Set up a drupal field table query.
@@ -446,19 +358,108 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     // Count duplicates.
     $n_duplicates = 0;
     $n_summarized = 0;
-    $first_several = '';
+    $outputmessages = [];
     foreach ($items as $record_id => $values) {
       if (count($values) > 1) {
         $n_duplicates++;
         if ($n_duplicates <= 10) {
           $n_summarized++;
-          $first_several .= '<br>record_id ' . $record_id . ': entities(' . implode(', ', $values) . ')';
+          $output_messages[] = 'record_id ' . $record_id . ': entities(' . implode(', ', $values) . ')';
         }
       }
     }
+    if ($outputmessages) {
+      $subset_label = ($n_summarized == $n_duplicates) ? '' : ', first ' . $n_summarized . ' shown:';
+      $first_several = $this->flattenErrors($outputmessages);
+      return [$n_duplicates, $n_duplicates . ' duplicates found' . $subset_label . ': ' . $first_several];
+    }
+    else {
+      return [$n_duplicates, 'No duplicates found, ' . number_format(count($items)) . ' records checked.'];
+    }
+  }
 
-    $subset_label = ($n_summarized == $n_duplicates) ? '' : ' First ' . $n_summarized;
-    return [$n_duplicates, $n_duplicates . ' duplicates found' . $subset_label . ': ' . $first_several];
+  /**
+   * Validates CarrotOmics stock accession numbers.
+   *
+   * For germplasm accessions using CarrotOmmics as the database,
+   * the convention is to have the accession reflect the CarrotOmics
+   * type id and entity number, e.g. accession/123456, so that links
+   * are clickable. Note that CarrotOmics only uses the germplasm
+   * accession content type for all stocks.
+   */
+  protected function validateCarrotomicsAccessions() {
+#\d tripal_entity__germplasm_unique_name
+#                           Table "public.tripal_entity__germplasm_unique_name"
+#             Column              |          Type          | Collation | Nullable |        Default        
+#---------------------------------+------------------------+-----------+----------+-----------------------
+# bundle                          | character varying(128) |           | not null | ''::character varying
+# deleted                         | smallint               |           | not null | 0
+# entity_id                       | bigint                 |           | not null | 
+# revision_id                     | bigint                 |           | not null | 
+# langcode                        | character varying(32)  |           | not null | ''::character varying
+# delta                           | bigint                 |           | not null | 
+# germplasm_unique_name_record_id | integer                |           |          | 
+# germplasm_unique_name_value     | text                   |           |          | 
+
+    // Find candidate accessions from the CarrotOmics DB.
+    // CarrotOmics stores all germplasm types only as "germplasm",
+    // so we only need to join a single drupal field table.
+    $sql1 = "SELECT S.stock_id, S.dbxref_id, X.accession, T.name, E.entity_id"
+    . " FROM {1:stock} S"
+    . " LEFT JOIN {1:dbxref} X ON S.dbxref_id=X.dbxref_id"
+    . " LEFT JOIN {1:cvterm} T ON S.type_id=T.cvterm_id"
+    . " LEFT JOIN {0:tripal_entity__germplasm_unique_name} E ON S.uniquename=E.germplasm_unique_name_value"
+    . " WHERE X.db_id=(SELECT db_id FROM {1:db} WHERE name='CarrotOmics')";
+    $args1 = [];
+dpm($sql1);
+    try {
+      $results1 = $this->chado_connection->query($sql1, $args1);
+    } catch (Exception $e) {
+      return [1, $e->getMessage()];
+    }
+
+    $ncorrect = 0;
+    $nchanged = 0;
+    $nunpublished = 0;
+    $nerrors = 0;
+    $outputmessages = [];
+
+    while ($obj = $results1->fetchObject()) {
+      $stock_id = $obj->stock_id;
+      $dbxref_id = $obj->dbxref_id;
+      $accession = $obj->accession;
+      $entity_id = $obj->entity_id;
+      // Tripal 3 needed to remove spaces e.g. "generated germplasm".
+      // $cvname = preg_replace('/\s/', '', $obj->name);
+      // but now everythint iW "germplasm".
+      $cvname = 'germplasm';
+
+      // Entity will not be present if not yet published.
+      if ($entity_id) {
+        $expected = $cvname . '/' . $entity_id;
+        if ( $accession == $expected ) {
+          $ncorrect++;
+        }
+        else {
+          // Incorrect accession, need to update.
+          $link = '<a class="carrotomics-admin-link-button" href="/bio_data/' . $entity_id . '">' . $stock_id . '</a> ⟶ ';
+          $outputmessages[] = $link . "Update accession from \"$accession\" to \"$expected\"";
+          $sql3 = "UPDATE {1:dbxref} SET accession=:acc WHERE dbxref_id=:dbxref_id";
+          $args3 = [ ':acc' => $expected, ':dbxref_id' => $dbxref_id ];
+          try {
+#@todo don't change yet            $results3 = $this->chado_connection->query($sql3, $args3);
+          } catch (Exception $e) {
+            return [1, $e->getMessage()];
+          }
+          $nchanged++;
+        }
+      }
+      else {
+        $nunpublished++;
+      }
+    }
+
+    return [$nerrors, "$nchanged accessions updated, $ncorrect were correct, $nunpublished need to be published " . $this->flattenErrors($outputmessages)];
   }
 
   /**
@@ -534,6 +535,10 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
           }
         }
       }
+      if ($nerrors >= 100) {
+        $outputmessages[] = 'Too many errors, further errors are not shown';
+        break;
+      }
     }
 
     if ($outputmessages) {
@@ -541,6 +546,73 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     }
     else {
       return [0, "$nchecked public:// files checked, there were no problems found"];
+    }
+  }
+
+  /**
+   * Validate urls in the eimage table.
+   *
+   * Ensure that all URLs in the chado.eimage table point to an existing file.
+   */
+  protected function validateEimage() {
+    // Ihe output message will be a list of problems found.
+    // It will be empty if everything is correct.
+    $outputmessage = '';
+    $nchecked = 0;
+    $nerrors = 0;
+
+    // Regex pattern and replacements are defined in the formatter settings.
+    // We could assume that all table entries are for germplasm accessions.
+    // That may not be true in the future. We will instead assume that
+    // CarrotOmics always uses the same thumbnail regex configuration.
+    $regex_pattern = 'eimage\/image';
+    $regex_replacement = 'eimage/thumbnail';
+
+    // Get a list of files to check, order by eimage_id for a somewhat
+    // chronological list, then check each one.
+    $sql = "SELECT eimage_id, image_uri FROM {1:eimage} ORDER BY eimage_id";
+    $results = $this->chado_connection->query($sql, []);
+    while ($obj = $results->fetchObject()) {
+      $eimage_id = $obj->eimage_id;
+      $image_uri = $obj->image_uri;
+      $nchecked++;
+
+      // Convert to filesystem full path.
+      // For CarrotOmics all images are locally hosted under public://.
+      $full_image_path = $this->file_system->realpath($image_uri);
+      $thumbnail_path = preg_replace('/' . $regex_pattern . '/', $regex_replacement, $full_image_path);
+
+      // 1. validate full resolution image existence
+      if (!file_exists($full_image_path)) {
+        $outputmessage .= "<li>Image $eimage_id not present \"$image_uri\"</li>";
+        $nerrors++;
+      }
+      // 2. validate full resolution image size
+      elseif (!filesize($full_image_path)) {
+        $outputmessage .= "<li>Zero size image file $eimage_id \"$image_uri\"</li>";
+        $nerrors++;
+      }
+      // 3. validate thumbnail image existence
+      if (!file_exists($thumbnail_path)) {
+        $outputmessage .= "<li>Thumbnail $eimage_id not present \"$thumbnail_path\"</li>";
+        $nerrors++;
+      }
+      // 4. validate thumbnail image size
+      elseif (!filesize($thumbnail_path)) {
+        $outputmessage .= "<li>Zero size thumbnail image file $eimage_id \"$thumbnail_path\"</li>";
+        $nerrors++;
+      }
+      if ($nerrors >= 100) {
+        $outputmessage .= "<li value=\"0\">Too many errors, further errors are not shown</li>";
+        break;
+      }
+    }
+
+    if ($outputmessage) {
+      return [1, "$nerrors errors found<ol>$outputmessage</ol>"];
+    }
+    else {
+      return [0, "$nchecked files checked, there were no problems found"];
     }
   }
 
