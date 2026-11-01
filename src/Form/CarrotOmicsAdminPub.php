@@ -285,6 +285,8 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->dropEmptyProperties();
     }
     else {
+      $this->logger->error('CarrotOmicsAdminPub: Unknown button "@button" was pressed',
+        ['@button' => $triggering_element]);
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
     }
     $form_state->setStorage(['results' => $status]);
@@ -815,6 +817,8 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
         $results = $this->chado_connection->query($sql, $args);
       }
       catch (\Exception $e) {
+        $this->logger->error('mergePublications: Exception: @error',
+          ['@error' => $e->getMessage()]);
         return [1, $e->getMessage()];
       }
 
@@ -851,6 +855,8 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (\Exception $e) {
+      $this->logger->error('mergePublications: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -1151,10 +1157,13 @@ class CarrotOmicsAdminPub extends CarrotOmicsAdminFormBase {
     $this->republish();
 
     if ($outputmessages) {
+      $text = "$nexisting existing relationships present, $nadded relationships added, $nerrors errors, $nwarnings warnings"
+      . $this->flattenErrors($outputmessages);
+      $this->logger->notice('unlinkedPub: @text',
+        ['@text' => $text]);
       return [
         $nerrors,
-        "$nexisting existing relationships present, $nadded relationships added, $nerrors errors, $nwarnings warnings"
-        . $this->flattenErrors($outputmessages),
+        $text,
       ];
     }
     else {

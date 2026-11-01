@@ -13,7 +13,6 @@ use Drupal\tripal\Services\TripalEntityLookup;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalStorage\PluginManager\TripalStorageManager;
-use Drupal\tripal_chado\Plugin\TripalStorage\ChadoStorage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -245,6 +244,8 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->validateEimage();
     }
     else {
+      $this->logger->error('CarrotOmicsAdminValidate: Unknown button "@button" was pressed',
+        ['@button' => $triggering_element]);
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
     }
     $form_state->setStorage(['results' => $status]);
@@ -383,24 +384,11 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
    *
    * For germplasm accessions using CarrotOmmics as the database,
    * the convention is to have the accession reflect the CarrotOmics
-   * type id and entity number, e.g. accession/123456, so that links
+   * type id and entity number, e.g. germplasm/123456, so that links
    * are clickable. Note that CarrotOmics only uses the germplasm
    * accession content type for all stocks.
    */
   protected function validateCarrotomicsAccessions() {
-#\d tripal_entity__germplasm_unique_name
-#                           Table "public.tripal_entity__germplasm_unique_name"
-#             Column              |          Type          | Collation | Nullable |        Default        
-#---------------------------------+------------------------+-----------+----------+-----------------------
-# bundle                          | character varying(128) |           | not null | ''::character varying
-# deleted                         | smallint               |           | not null | 0
-# entity_id                       | bigint                 |           | not null | 
-# revision_id                     | bigint                 |           | not null | 
-# langcode                        | character varying(32)  |           | not null | ''::character varying
-# delta                           | bigint                 |           | not null | 
-# germplasm_unique_name_record_id | integer                |           |          | 
-# germplasm_unique_name_value     | text                   |           |          | 
-
     // Find candidate accessions from the CarrotOmics DB.
     // CarrotOmics stores all germplasm types only as "germplasm",
     // so we only need to join a single drupal field table.
@@ -411,10 +399,12 @@ class CarrotOmicsAdminValidate extends CarrotOmicsAdminFormBase {
     . " LEFT JOIN {0:tripal_entity__germplasm_unique_name} E ON S.uniquename=E.germplasm_unique_name_value"
     . " WHERE X.db_id=(SELECT db_id FROM {1:db} WHERE name='CarrotOmics')";
     $args1 = [];
-dpm($sql1);
     try {
       $results1 = $this->chado_connection->query($sql1, $args1);
-    } catch (Exception $e) {
+    }
+    catch (\Exception $e) {
+      $this->logger->error('validateCarrotomicsAccessions: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -437,7 +427,7 @@ dpm($sql1);
       // Entity will not be present if not yet published.
       if ($entity_id) {
         $expected = $cvname . '/' . $entity_id;
-        if ( $accession == $expected ) {
+        if ($accession == $expected) {
           $ncorrect++;
         }
         else {
@@ -445,10 +435,14 @@ dpm($sql1);
           $link = '<a class="carrotomics-admin-link-button" href="/bio_data/' . $entity_id . '">' . $stock_id . '</a> ⟶ ';
           $outputmessages[] = $link . "Update accession from \"$accession\" to \"$expected\"";
           $sql3 = "UPDATE {1:dbxref} SET accession=:acc WHERE dbxref_id=:dbxref_id";
-          $args3 = [ ':acc' => $expected, ':dbxref_id' => $dbxref_id ];
+          $args3 = [':acc' => $expected, ':dbxref_id' => $dbxref_id];
           try {
-#@todo don't change yet            $results3 = $this->chado_connection->query($sql3, $args3);
-          } catch (Exception $e) {
+            // @todo don't change yet
+            // $results3 = $this->chado_connection->query($sql3, $args3);
+          }
+          catch (\Exception $e) {
+            $this->logger->error('validateCarrotomicsAccessions: Exception: @error',
+              ['@error' => $e->getMessage()]);
             return [1, $e->getMessage()];
           }
           $nchanged++;
@@ -459,7 +453,10 @@ dpm($sql1);
       }
     }
 
-    return [$nerrors, "$nchanged accessions updated, $ncorrect were correct, $nunpublished need to be published " . $this->flattenErrors($outputmessages)];
+    return [
+      $nerrors,
+      "$nchanged accessions updated, $ncorrect were correct, $nunpublished need to be published " . $this->flattenErrors($outputmessages),
+    ];
   }
 
   /**
@@ -528,7 +525,9 @@ dpm($sql1);
                 $nerrors++;
               }
             }
-            catch (Exception $e) {
+            catch (\Exception $e) {
+              $this->logger->error('validateFileloc: File read error for file "@uri", Exception: @error',
+                ['@uri' => $uri, '@error' => $e->getMessage()]);
               $outputmessages[] = $this->entityLink('file', $file_id) . "File read error for file \"$uri\" " . $e->getMessage();
               $nerrors++;
             }

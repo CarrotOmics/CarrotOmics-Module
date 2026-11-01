@@ -292,6 +292,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       [$nerrors, $status] = $this->featuremapStock();
     }
     else {
+      $this->logger->error('CarrotOmicsAdminSql: Unknown button "@button" was pressed',
+        ['@button' => $triggering_element]);
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
     }
     $form_state->setStorage(['results' => $status]);
@@ -384,6 +386,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       }
     }
     if ($count) {
+      $this->logger->notice('cleanNullProps: @count NULL records removed',
+        ['@count' => $count]);
       return [0, "$count NULL records removed"];
     }
     else {
@@ -406,6 +410,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       $results1 = $this->chado_connection->query($sql1, $args1);
     }
     catch (Exception $e) {
+      $this->logger->error('populateOrganismAbbreviations: Query exception: @msg',
+        ['@msg' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -420,6 +426,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
           $this->chado_connection->query($sql2, $args2);
         }
         catch (Exception $e) {
+          $this->logger->error('populateOrganismAbbreviations: Update exception: @msg',
+            ['@msg' => $e->getMessage()]);
           return [1, $e->getMessage()];
         }
         $nupdated++;
@@ -430,6 +438,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     }
 
     if ($nupdated) {
+      $this->logger->notice('populateOrganismAbbreviations: @nupdated organism abbreviations were populated, @nerrors errors',
+        ['@nupdated' => $nupdated, '@nerrors' => $nerrors]);
       return [$nerrors, "$nupdated organism abbreviations were populated, $nerrors errors"];
     }
     else {
@@ -501,6 +511,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
     }
     $status = $this->t('Updated @nupdated features, @nerrors errors',
                 ['@nupdated' => $nupdated, '@nerrors' => $nerrors]);
+    $this->logger->notice('residuesLengthChecksum: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -594,6 +606,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
     $status = $this->t('Added @nadded published_names, @nskipped skipped, @nerrors errors',
                 ['@nadded' => $nadded, '@nskipped' => $nskipped, '@nerrors' => $nerrors]);
+    $this->logger->notice('qtlAbbrev: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -694,10 +708,10 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '@nupdated_m_l' => $nupdated_m_l,
       '@nerrors' => $nerrors,
     ]);
+    $this->logger->notice('geneticMarkerMarkerLocusFix: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
-
-  // @@@;;;
 
   /**
    * Generate entries in the chado.biomaterial_analysis custom table.
@@ -750,6 +764,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
     $status = $this->t('Found @nexisting existing links, added @nadded links, @nerrors errors',
       ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    $this->logger->notice('biomaterialAnalysisLinker: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -832,6 +848,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
     $status = $this->t('Found @nexisting existing links, added @nadded links, @nerrors errors',
       ['@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    $this->logger->notice('biomaterialStockLinker: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -876,6 +894,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('stockAnalysisLinker: Query exception: @msg',
+        ['@msg' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
     while ($obj = $results->fetchObject()) {
@@ -893,7 +913,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
         }
         else {
           $values = ['stock_id' => $stock_id, 'analysis_id' => $analysis_id];
-          if (chado_insert_record('stock_analysis', $values, [])) {
+          if ($this->insertStockAnalysis($values)) {
             $nadded++;
             $previously_added[$stock_id . ':' . $analysis_id] = 1;
           }
@@ -913,8 +933,7 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
         }
         else {
           $values = ['stock_id' => $stock_id, 'analysis_id' => $parent_analysis_id];
-//@todo;;;
-          if (chado_insert_record('stock_analysis', $values, [])) {
+          if ($this->insertStockAnalysis($values)) {
             $nadded++;
             $previously_added[$stock_id . ':' . $parent_analysis_id] = 1;
           }
@@ -932,7 +951,34 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '@nerrors' => $nerrors,
       '@nduplicated' => $nduplicated,
     ]);
+    $this->logger->notice('stockAnalysisLinker: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
+  }
+
+  /**
+   * Adds a new record to the chado stock_analysis table.
+   *
+   * @var array $values
+   *   Values for the inserted record. Keys will be:
+   *   - stock_id,
+   *   - analysis_id.
+   *
+   * @return bool
+   *   TRUE for success, FALSE for failure.
+   */
+  protected function insertStockAnalysis(array $values): bool {
+    $query = $this->chado_connection->insert('1:stock_analysis');
+    $query->fields($values);
+    try {
+      $query->execute();
+      return TRUE;
+    }
+    catch (\Exception $e) {
+      $this->logger->error('stockAnalysisLinker: exception inserting record: @msg',
+        ['@msg' => $e->getMessage()]);
+      return FALSE;
+    }
   }
 
   /**
@@ -1109,6 +1155,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
     $status = $this->t('For @nmaps maps, @nexisting properties exist, added @nadded properties, @nerrors errors',
       ['@nmaps' => $nmaps, '@nexisting' => $nexisting, '@nadded' => $nadded, '@nerrors' => $nerrors]);
+    $this->logger->notice('generateFeaturemapprop: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -1177,6 +1225,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
 
     $status = $this->t('Added @nadded organism links, @nfailed unable to determine organism, @nerrors errors',
       ['@nadded' => $nadded, '@nfailed' => $nfailed, '@nerrors' => $nerrors]);
+    $this->logger->notice('phylotreeOrganism: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 
@@ -1255,6 +1305,8 @@ class CarrotOmicsAdminSql extends CarrotOmicsAdminFormBase {
       '@nremoved' => $nremoved,
       '@nerrors' => $nerrors,
     ]);
+    $this->logger->notice('featuremapStock: @status',
+      ['@status' => $status . $errors]);
     return [$nerrors, $status . $errors];
   }
 

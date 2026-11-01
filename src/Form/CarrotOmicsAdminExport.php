@@ -269,6 +269,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       }
     }
     else {
+      $this->logger->error('CarrotOmicsAdminExport: Unknown button "@button" was pressed',
+        ['@button' => $triggering_element]);
       [$nerrors, $status] = [1, "Unknown button \"$triggering_element\" was pressed"];
     }
     $form_state->setStorage(['results' => $status]);
@@ -307,6 +309,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('gbsLocation: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -379,6 +383,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('populateStockFeaturemap: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -442,6 +448,7 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
     }
     catch (\Exception $e) {
       // If tripal_jbrowse is not installed.
+      $this->logger->error('jbrowseGenomes: tripal_jbrowse is not installed');
       return ['' => 'tripal_jbrowse is not installed'];
     }
     $options_genomes = [];
@@ -453,6 +460,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
         $options_genomes['project_id.' . $obj->project_id] = $obj->project_name;
       }
       else {
+        $this->logger->error('jbrowseGenomes: Unable to get ID from JBrowse instance uid=@uid',
+          ['@uid' => $obj->uid]);
         throw new \Exception('Unable to get ID from JBrowse instance uid=' . $obj->uid);
       }
     }
@@ -483,10 +492,13 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $pkey = $matches[1];
     }
     else {
+      $this->logger->error('markerGff3: Unable to parse jbrowse_source: @source',
+        ['@source' => $jbrowse_source]);
       throw new \Exception('Unable to parse jbrowse_source: ' . $jbrowse_source);
     }
     // @todo cannot currently handle project!
     if ($type == 'project') {
+      $this->logger->error('markerGff3: Using project not yet implemented');
       return [1, 'Using project not yet implemented'];
     }
     $sql = "SELECT
@@ -524,6 +536,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('markerGff3: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -596,6 +610,7 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
     $query1->condition('D.name', 'GRINTaxon', '=');
     $grin_taxon_id = $query1->execute()->fetchField();
     if (!$grin_taxon_id) {
+      $this->logger->error('organismList: Error, no db record for GRINTaxon, cannot continue');
       return [1, 'Error, no db record for GRINTaxon, cannot continue'];
     }
 
@@ -615,6 +630,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, []);
     }
     catch (Exception $e) {
+      $this->logger->error('organismList: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
 
@@ -701,6 +718,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('paaList: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
     $content = implode("\t", ['table', 'record_id', 'type', 'name', 'description']) . "\n";
@@ -747,6 +766,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('carrotomicsStock: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
     $content = implode("\t", ['stock_id', 'repository', 'accession', 'project']) . "\n";
@@ -790,6 +811,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('biomaterial: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
     $content = implode("\t", ['biomaterialname', 'projectname', 'analysisname', 'assayname']) . "\n";
@@ -828,6 +851,8 @@ class CarrotOmicsAdminExport extends CarrotOmicsAdminFormBase {
       $results = $this->chado_connection->query($sql, $args);
     }
     catch (Exception $e) {
+      $this->logger->error('stockImage: Exception: @error',
+        ['@error' => $e->getMessage()]);
       return [1, $e->getMessage()];
     }
     $content = implode("\t", ['accession', 'image_uri']) . "\n";
